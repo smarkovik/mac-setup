@@ -46,6 +46,8 @@
         #- "google-photos-backup-and-sync"
         #- "visual-studio-code"
         - "postman"
+        - "proxyman"
+        - "ngrok"
         - "spotify"
         - "vlc"
         - "whatsapp"
