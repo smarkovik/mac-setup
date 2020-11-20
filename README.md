@@ -1,2 +1,6 @@
 # mac-setup
-The setup I use on my mac
+This is my personal machine setup, feel free to use, copy, clone, and contribute. 
+
+Hope you like it. 
+
+To run, just execute ./mac-setup.sh

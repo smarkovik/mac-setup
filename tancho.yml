@@ -1,0 +1,106 @@
+---
+# Tancho's personal runbook
+# ansible-playbook tancho.yml
+
+- name: "run the playbook tasks on the localhost"
+  hosts: 127.0.0.1
+  connection: local
+  become: no
+  tasks:
+    # print full ansible environment.
+    - debug: var=ansible_facts
+        
+    - name: "Allow local sudo without password"
+      copy:
+        content: "{{ ansible_ssh_user }} ALL=(ALL) NOPASSWD: ALL"
+        dest: "/private/etc/sudoers.d/{{ ansible_ssh_user }}"
+      become: yes
+
+    - name: "Create home folder structure"
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: 0775
+      with_items:
+        - $HOME/bin
+        - $HOME/Development/repos
+        - $HOME/Development/bin
+        - $HOME/Development/tools
+        - $HOME/Development/tests
+        - $HOME/Pictures/Screenshots
+
+    - name: "Setup GIT user vars"
+      shell: |
+          git config --global user.name "Tancho Markovik"
+          git config --global user.email "tancho@izicap.com"
+          git config --global apply.whitespace nowarn
+      args:
+        executable: /bin/bash
+
+    - name: "Install DMGs"
+      homebrew_cask:
+        name: "{{ item }}"
+      with_items:
+        #- "google-chrome"
+        - "dropbox"
+        #- "google-photos-backup-and-sync"
+        #- "visual-studio-code"
+        - "postman"
+        - "spotify"
+        - "vlc"
+        - "whatsapp"
+        - "viber"
+        - "slack" 
+        - "zoomus" 
+        - "adoptopenjdk8"
+
+    - name: "Install cli tools"
+      homebrew:
+        name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg']
+
+    - name: "Install xcpretty"
+      shell: "gem install xcpretty"
+      become: yes
+
+    - name: "Setup Mac UI level changes to my preferences"
+      shell: |
+          chflags nohidden ~/Library
+          defaults write com.apple.finder AppleShowAllFiles yes
+          defaults write com.apple.finder ShowPathbar -bool true
+          defaults write com.apple.finder ShowStatusBar -bool true
+          defaults write com.apple.finder QLEnableTextSelection -bool true
+          defaults write com.apple.finder NewWindowTarget -string 'PfDe'
+          defaults write com.apple.finder NewWindowTargetPath -string 'file://~/Desktop/'
+          defaults write com.apple.finder ShowRecentTags -bool false
+          defaults write -g AppleShowAllExtensions -bool true
+          defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+          defaults write com.apple.screencapture location ~/Pictures/Screenshots
+          defaults write com.apple.screencapture type -string "png"
+          defaults write com.apple.dock show-process-indicators -bool true
+          defaults write com.apple.Dock showhidden -bool yes 
+          defaults write com.apple.menuextra.battery ShowPercent -string "YES"
+          defaults write com.apple.menuextra.battery ShowTime -string "YES"
+          defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
+          defaults write com.apple.dock expose-animation-duration -float 0.12
+          defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+          defaults write com.microsoft.Office SendPersonalInformationToMotherShip NO
+          defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+          defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+          defaults write -g NSDocumentSaveNewDocumentsToCloud -bool false
+          defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+          defaults write com.apple.dock minimize-to-application -bool true
+          defaults write com.apple.dock persistent-others -array-add '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+          defaults write com.apple.finder PathBarRootAtHome -bool yes  
+          defaults write -g NSNavPanelExpandedStateForSaveMode -bool YES
+          defaults write com.apple.finder EmptyTrashSecurely -bool true
+          defaults write -g NSWindowSupportsAutomaticInlineTitle -bool false
+      args:
+        executable: /bin/bash
+
+    # finished !  
+    - name:
+      shell: say "Shall we play a game?"
+
+      
+
+        
