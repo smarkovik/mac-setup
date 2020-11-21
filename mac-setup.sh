@@ -72,3 +72,8 @@ fi
 
 log_info "running the ansible playbook"
 ansible-playbook $CURRET_DIR/tancho.yml
+
+log_info "generating SSH key for github"
+ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -P ""
+echo "paste this in github.com/setting/sshkeys"
+cat $HOME/.ssh/id_rsa
