@@ -55,6 +55,7 @@
         - "slack" 
         - "zoomus" 
         - "adoptopenjdk8"
+        - "tunnelblick"
 
     - name: "Install cli tools"
       homebrew:
