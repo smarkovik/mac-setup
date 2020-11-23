@@ -41,10 +41,10 @@
       homebrew_cask:
         name: "{{ item }}"
       with_items:
-        #- "google-chrome"
+        - "google-chrome"
         - "dropbox"
-        #- "google-photos-backup-and-sync"
-        #- "visual-studio-code"
+        - "google-backup-and-sync"
+        - "visual-studio-code"
         - "postman"
         - "proxyman"
         - "ngrok"
