@@ -46,8 +46,8 @@
            - "dropbox"
            - "google-backup-and-sync"
            - "visual-studio-code"
-           - "postman"
-           - "proxyman"
+           #- "postman"
+           #- "proxyman"
            - "whatsapp"
            - "viber"
            - "slack" 
@@ -59,7 +59,7 @@
 
       - name: "Install cli tools"
         homebrew:
-          name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg', 'openjdk', 'wget', 'tree']
+          name: ['sloccount', 'mc', 'git-lfs', 'ffmpeg', 'openjdk', 'wget', 'tree']
 
       - name: "Install xcpretty"
         shell: "gem install xcpretty"
