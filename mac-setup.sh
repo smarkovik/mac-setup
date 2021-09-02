@@ -69,6 +69,14 @@ brew install ansible; \
 
 printf "Brew and Ansible already present or freshly installed, moving on. \n"
 
+log_info "running the ansible playbook"
+ansible-playbook $CURRET_DIR/tancho.yml
+
+log_info "generating SSH key for github"
+ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -P ""
+echo "paste this in github.com/setting/sshkeys"
+cat $HOME/.ssh/id_rsa
+
 log_warn "Looking for oh-my-zsh..."
 ohmyzsh='.oh-my-zs'
 if [[ $ZSH == *"$ohmyzsh"* ]]; then
@@ -78,10 +86,3 @@ else
     /bin/sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-log_info "running the ansible playbook"
-ansible-playbook $CURRET_DIR/tancho.yml
-
-log_info "generating SSH key for github"
-ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -P ""
-echo "paste this in github.com/setting/sshkeys"
-cat $HOME/.ssh/id_rsa
