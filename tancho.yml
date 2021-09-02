@@ -40,7 +40,7 @@
 
       - name: "Install DMGs"
         homebrew_cask:
-        name: "{{ item }}"
+          name: "{{ item }}"
         with_items:
            - "google-chrome"
            - "dropbox"
