@@ -8,66 +8,65 @@
       become: no
       tasks:
 
-    # print full ansible environment.
-    - debug: var=ansible_facts
+        # print full ansible environment.
+      - debug: var=ansible_facts
 
-    - name: "Allow local sudo without password"
-      copy:
-        content: "{{ ansible_user_id }} ALL=(ALL) NOPASSWD: ALL"
-        dest: "/private/etc/sudoers.d/{{ ansible_user_id }}"
-      become: yes
+      - name: "Allow local sudo without password"
+        copy:
+          content: "{{ ansible_user_id }} ALL=(ALL) NOPASSWD: ALL"
+          dest: "/private/etc/sudoers.d/{{ ansible_user_id }}"
+        become: yes
 
-    - name: "Create home folder structure"
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: 0775
-      with_items:
-        - $HOME/bin
-        - $HOME/Development/repos
-        - $HOME/Development/bin
-        - $HOME/Development/tools
-        - $HOME/Development/tests
-        - $HOME/Pictures/Screenshots
+      - name: "Create home folder structure"
+        file:
+          path: "{{ item }}"
+          state: directory
+          mode: 0775
+        with_items:
+          - $HOME/bin
+          - $HOME/Development/repos
+          - $HOME/Development/bin
+          - $HOME/Development/tools
+          - $HOME/Development/tests
+          - $HOME/Pictures/Screenshots
 
-    - name: "Setup GIT user vars"
-      shell: |
-          git config --global user.name "Tancho Markovik"
-          git config --global user.email "tancho@izicap.com"
-          git config --global apply.whitespace nowarn
-      args:
-        executable: /bin/bash
+      - name: "Setup GIT user vars"
+        shell: |
+           git config --global user.name "Tancho Markovik"
+           git config --global user.email "tancho@izicap.com"
+           git config --global apply.whitespace nowarn
+        args:
+          executable: /bin/bash
 
-    - name: "Install DMGs"
-      homebrew_cask:
+      - name: "Install DMGs"
+        homebrew_cask:
         name: "{{ item }}"
-      with_items:
-        - "google-chrome"
-        - "dropbox"
-        - "google-backup-and-sync"
-        - "visual-studio-code"
-        - "postman"
-        - "proxyman"
-        - "spotify"
-        - "whatsapp"
-        - "viber"
-        - "slack" 
-        - "tunnelblick"
-        - "microsoft-teams"
-        - "webex"
-        - "microsoft-edge"
+        with_items:
+           - "google-chrome"
+           - "dropbox"
+           - "google-backup-and-sync"
+           - "visual-studio-code"
+           - "postman"
+           - "proxyman"
+           - "whatsapp"
+           - "viber"
+           - "slack" 
+           - "tunnelblick"
+           - "microsoft-teams"
+           - "webex"
+           - "microsoft-edge"
  
 
-    - name: "Install cli tools"
-      homebrew:
-        name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg', 'openjdk', 'wget', 'tree']
+      - name: "Install cli tools"
+        homebrew:
+          name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg', 'openjdk', 'wget', 'tree']
 
-    - name: "Install xcpretty"
-      shell: "gem install xcpretty"
-      become: yes
+      - name: "Install xcpretty"
+        shell: "gem install xcpretty"
+        become: yes
 
-    - name: "Setup Mac UI level changes to my preferences"
-      shell: |
+      - name: "Setup Mac UI level changes to my preferences"
+        shell: |
           chflags nohidden ~/Library
           defaults write com.apple.finder AppleShowAllFiles yes
           defaults write com.apple.finder ShowPathbar -bool true
@@ -102,16 +101,5 @@
           # Use list view in all Finder windows by default
           # Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
           defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-
-
-
-      args:
-        executable: /bin/bash
-
-    # finished !  
-    - name:
-      shell: say "Shall we play a game?"
-
-      
-
-        
+        args:
+          executable: /bin/bash
