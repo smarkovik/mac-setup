@@ -2,6 +2,10 @@
 
 # exit on error
 set -e
+# Xcode location on disk 
+XCODE_BIN=/Applications/Xcode.app/Contents/Developer/usr/bin
+# USER=$(whoami) // system defined
+
 
 CURRET_DIR=$(pwd)
 
@@ -42,17 +46,21 @@ fi
 log_info "ansible playbook found: tancho.yml"
 
 log_warn "Checking for XCode install"
-/usr/bin/xcodebuild -version
+$XCODE_BIN/xcodebuild -version
 
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
-sudo xcodebuild -license accept
+sudo $XCODE_BIN/xcodebuild -license accept
 
 log_warn "Validating local Homebrew, Ansible installs, (installing if not available ) "
 
 command -v brew >/dev/null 2>&1 || { \
 echo >&2 "Homebrew not present on system, installing... "; \
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"; \
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
 }
+
+#setup home-brew
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$USER/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 command -v ansible >/dev/null 2>&1 || { \
 echo >&2 "Ansible not present on the system, installing"; \
