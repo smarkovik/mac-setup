@@ -2,18 +2,19 @@
 # Tancho's personal runbook
 # ansible-playbook tancho.yml
 
-- name: "run the playbook tasks on the localhost"
-  hosts: 127.0.0.1
-  connection: local
-  become: no
-  tasks:
+    - name: "run the playbook tasks on the localhost"
+      hosts: 127.0.0.1
+      connection: local
+      become: no
+      tasks:
+
     # print full ansible environment.
     - debug: var=ansible_facts
-        
+
     - name: "Allow local sudo without password"
       copy:
-        content: "{{ ansible_ssh_user }} ALL=(ALL) NOPASSWD: ALL"
-        dest: "/private/etc/sudoers.d/{{ ansible_ssh_user }}"
+        content: "{{ ansible_user_id }} ALL=(ALL) NOPASSWD: ALL"
+        dest: "/private/etc/sudoers.d/{{ ansible_user_id }}"
       become: yes
 
     - name: "Create home folder structure"
@@ -47,19 +48,19 @@
         - "visual-studio-code"
         - "postman"
         - "proxyman"
-        - "ngrok"
         - "spotify"
-        - "vlc"
         - "whatsapp"
         - "viber"
         - "slack" 
-        - "zoomus" 
-        - "adoptopenjdk8"
         - "tunnelblick"
+        - "microsoft-teams"
+        - "webex"
+        - "microsoft-edge"
+ 
 
     - name: "Install cli tools"
       homebrew:
-        name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg']
+        name: ['sloccount', 'carthage', 'mc', 'htop', 'git-lfs', 'cloc', 'ffmpeg', 'openjdk', 'wget', 'tree']
 
     - name: "Install xcpretty"
       shell: "gem install xcpretty"
@@ -97,6 +98,13 @@
           defaults write -g NSNavPanelExpandedStateForSaveMode -bool YES
           defaults write com.apple.finder EmptyTrashSecurely -bool true
           defaults write -g NSWindowSupportsAutomaticInlineTitle -bool false
+          defaults write com.apple.TextEdit RichText -int 0
+          # Use list view in all Finder windows by default
+          # Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
+          defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+
+
+
       args:
         executable: /bin/bash
 
