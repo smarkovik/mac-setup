@@ -242,15 +242,39 @@
           defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
 
 
+          # Trackpad: enable tap to click for this user and for the login screen
+          defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+          defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+          defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+          
+          # Enable full keyboard access for all controls
+          # (e.g. enable Tab in modal dialogs)
+          defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
+
+          # Add icons in status bar
+          defaults write com.apple.systemuiserver menuExtras -array \
+            "/System/Library/CoreServices/Menu Extras/AirPort.menu" \
+            "/System/Library/CoreServices/Menu Extras/Bluetooth.menu" \
+            "/System/Library/CoreServices/Menu Extras/Clock.menu" \
+            "/System/Library/CoreServices/Menu Extras/Displays.menu" \
+            "/System/Library/CoreServices/Menu Extras/Volume.menu"
+
         args:
           executable: /bin/bash
 
-      - name: "Setup Mac UI level changes to my preferences"
+      - name: "Setup Mac System level changes to my preferences"
         shell: |
           # Enable lid wakeup
           pmset -a lidwake 1
           # Disable machine sleep while charging
           pmset -c sleep 0
+          # Disable the sound effects on boot
+          nvram SystemAudioVolume=" "
+          # Reveal IP address, hostname, OS version, etc. when clicking the clock
+          # in the login window
+          defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+          # Set system timezone to Paris
+          systemsetup -settimezone "Europe/Brussels" > /dev/null
 
         args:
           executable: /bin/bash
