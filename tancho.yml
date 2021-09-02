@@ -67,37 +67,55 @@
 
       - name: "Setup Mac UI level changes to my preferences"
         shell: |
+          #show Library folder
           chflags nohidden ~/Library
+          
+          #Finder changes
           defaults write com.apple.finder AppleShowAllFiles yes
-          defaults write com.apple.finder ShowPathbar -bool true
-          defaults write com.apple.finder ShowStatusBar -bool true
           defaults write com.apple.finder QLEnableTextSelection -bool true
-          defaults write com.apple.finder NewWindowTarget -string 'PfDe'
-          defaults write com.apple.finder NewWindowTargetPath -string 'file://~/Desktop/'
           defaults write com.apple.finder ShowRecentTags -bool false
+          defaults write com.apple.finder PathBarRootAtHome -bool yes  
+          defaults write com.apple.finder EmptyTrashSecurely -bool true
+
+          #apple
           defaults write -g AppleShowAllExtensions -bool true
-          defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+          defaults write -g NSDocumentSaveNewDocumentsToCloud -bool false
+          defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+          defaults write -g NSNavPanelExpandedStateForSaveMode -bool YES
+          defaults write -g NSWindowSupportsAutomaticInlineTitle -bool false
+
+          #Screenshots 
           defaults write com.apple.screencapture location ~/Pictures/Screenshots
           defaults write com.apple.screencapture type -string "png"
+
+          #Dock
           defaults write com.apple.dock show-process-indicators -bool true
           defaults write com.apple.Dock showhidden -bool yes 
-          defaults write com.apple.menuextra.battery ShowPercent -string "YES"
-          defaults write com.apple.menuextra.battery ShowTime -string "YES"
-          defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
           defaults write com.apple.dock expose-animation-duration -float 0.12
-          defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
-          defaults write com.microsoft.Office SendPersonalInformationToMotherShip NO
-          defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-          defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-          defaults write -g NSDocumentSaveNewDocumentsToCloud -bool false
-          defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
           defaults write com.apple.dock minimize-to-application -bool true
           defaults write com.apple.dock persistent-others -array-add '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
-          defaults write com.apple.finder PathBarRootAtHome -bool yes  
-          defaults write -g NSNavPanelExpandedStateForSaveMode -bool YES
-          defaults write com.apple.finder EmptyTrashSecurely -bool true
-          defaults write -g NSWindowSupportsAutomaticInlineTitle -bool false
+
+          #Menu
+          defaults write com.apple.menuextra.battery ShowPercent -string "YES"
+          defaults write com.apple.menuextra.battery ShowTime -string "YES"
+          
+          #network
+          defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
+          
+          #Office
+          defaults write com.microsoft.Office SendPersonalInformationToMotherShip NO
+          
+          #Desktop
+          defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+          defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+          
+          
+          #printing
+          defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+          
+          #text edit          
           defaults write com.apple.TextEdit RichText -int 0
+          
           # Use list view in all Finder windows by default
           # Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
           defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
