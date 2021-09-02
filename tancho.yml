@@ -46,6 +46,7 @@
            - "dropbox"
            - "google-backup-and-sync"
            - "visual-studio-code"
+           - "android-studio"
            #- "postman"
            #- "proxyman"
            - "whatsapp"
