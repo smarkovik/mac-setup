@@ -54,6 +54,7 @@
            - "tunnelblick"
            - "webex"
            - "microsoft-edge"
+           - "gitup"
  
 
       - name: "Install cli tools"
