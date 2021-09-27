@@ -44,7 +44,7 @@
         with_items:
            - "google-chrome"
            - "dropbox"
-           - "google-backup-and-sync"
+           - "google-drive"
            - "visual-studio-code"
            - "android-studio"
            #- "postman"
