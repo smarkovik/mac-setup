@@ -35,6 +35,8 @@
            git config --global user.name "Tancho Markovik"
            git config --global user.email "tancho@izicap.com"
            git config --global apply.whitespace nowarn
+           git config --global pager.branch false
+           
         args:
           executable: /bin/bash
 
