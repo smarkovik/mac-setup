@@ -1,6 +1,8 @@
 # mac-setup
 This is my personal machine setup, feel free to use, copy, clone, and contribute. 
 
+Note: Pre-requisit = Install XCode via AppStore.
+
 Hope you like it. 
 
 To run download the code and execute 
