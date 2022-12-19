@@ -3,7 +3,7 @@
 # exit on error
 set -e
 # Xcode location on disk 
-XCODE_BIN=/Applications/Xcode.app/Contents/Developer/usr/bin
+XCODE_BIN=/usr/bin
 # USER=$(whoami) // system defined
 
 
