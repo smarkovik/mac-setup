@@ -44,9 +44,9 @@ if [ ! -f $CURRET_DIR/tancho.yml ]; then
     exit -1
 fi
 log_info "ansible playbook found: tancho.yml"
-
 log_warn "Checking for XCode install"
-$XCODE_BIN/xcodebuild -version
+xcodebuild -runFirstLaunch
+#$XCODE_BIN/xcodebuild -version
 
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
 sudo $XCODE_BIN/xcodebuild -license accept
