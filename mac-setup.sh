@@ -51,6 +51,9 @@ xcodebuild -runFirstLaunch
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
 sudo $XCODE_BIN/xcodebuild -license accept
 
+log_warn "installing Rosetta"
+softwareupdate --install-rosetta
+
 log_warn "Validating local Homebrew, Ansible installs, (installing if not available ) "
 
 command -v brew >/dev/null 2>&1 || { \
