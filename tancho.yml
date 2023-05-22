@@ -61,7 +61,7 @@
 
       - name: "Install cli tools"
         homebrew:
-          name: ['sloccount', 'mc', 'git-lfs', 'ffmpeg', 'openjdk', 'wget', 'tree']
+          name: ['sloccount', 'mc', 'git-lfs', 'ffmpeg', 'openjdk', 'wget', 'tree', 'npm']
 
       - name: "Install xcpretty"
         shell: "gem install xcpretty"
