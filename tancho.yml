@@ -33,7 +33,7 @@
       - name: "Setup GIT user vars"
         shell: |
            git config --global user.name "Tancho Markovik"
-           git config --global user.email "tancho@izicap.com"
+           git config --global user.email "smarkovik@gmail.com"
            git config --global apply.whitespace nowarn
            git config --global pager.branch false
            
@@ -48,24 +48,21 @@
            - "dropbox"
            - "google-drive"
            - "visual-studio-code"
-           - "android-studio"
+           #- "android-studio"
            #- "postman"
            #- "proxyman"
            - "whatsapp"
            - "viber"
            - "slack" 
-           - "tunnelblick"
+           #- "tunnelblick"
            - "microsoft-edge"
+           - "brave-browser"
            - "gitup"
  
 
       - name: "Install cli tools"
         homebrew:
           name: ['sloccount', 'mc', 'git-lfs', 'ffmpeg', 'openjdk', 'wget', 'tree', 'npm']
-
-      - name: "Install xcpretty"
-        shell: "gem install xcpretty"
-        become: yes
 
       - name: "Setup Mac UI level changes to my preferences"
         shell: |
@@ -157,7 +154,7 @@
           # Set language and text formats
           # Note: if you’re in the US, replace `EUR` with `USD`, `Centimeters` with
           # `Inches`, `en_GB` with `en_US`, and `true` with `false`.
-          defaults write NSGlobalDomain AppleLanguages -array "en" "mk"
+          defaults write NSGlobalDomain AppleLanguages -array "en" "mk" "fr"
           defaults write NSGlobalDomain AppleLocale -string "en_GB@currency=EUR"
           defaults write NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
           defaults write NSGlobalDomain AppleMetricUnits -bool true
