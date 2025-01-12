@@ -48,6 +48,31 @@ log_warn "Checking for XCode install"
 xcodebuild -runFirstLaunch
 #$XCODE_BIN/xcodebuild -version
 
+#add passwordless sudo 
+
+# Find the currently logged-in user
+shell_user=$(whoami)
+# Ensure sudoers.d directory exists
+sudoers_dir="/private/etc/sudoers.d"
+if [ ! -d "$sudoers_dir" ]; then
+  echo "Creating sudoers.d directory..."
+  mkdir -p "$sudoers_dir"
+fi
+# Create the sudoers file for the user
+sudoers_file="$sudoers_dir/$shell_user"
+
+if [ -f "$sudoers_file" ]; then
+  # Check if the user already has the "NOPASSWD" entry
+  if grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
+    echo "The user '$shell_user' already has passwordless sudo privileges."
+  else
+    echo "The sudoers file exists, but it does not have passwordless sudo for '$shell_user'."
+    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$sudoers_file"
+    # Set the correct permissions for the sudoers file
+    chmod 0440 "$sudoers_file"
+  fi
+fi
+
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
 sudo $XCODE_BIN/xcodebuild -license accept
 
