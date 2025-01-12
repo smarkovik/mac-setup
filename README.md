@@ -1,6 +1,6 @@
 ## mac-setup
 
-###This is my personal machine setup, feel free to use, copy, clone, and contribute. 
+**This is my personal machine setup, feel free to use, copy, clone, and contribute. **
 
 _Note: Pre-requisit = Install XCode via AppStore._
 
