@@ -52,6 +52,7 @@ xcodebuild -runFirstLaunch
 
 # Find the currently logged-in user
 shell_user=$(whoami)
+
 # Ensure sudoers.d directory exists
 sudoers_dir="/private/etc/sudoers.d"
 if [ ! -d "$sudoers_dir" ]; then
@@ -68,6 +69,7 @@ if [ -f "$sudoers_file" ]; then
   else
     echo "The sudoers file exists, but it does not have passwordless sudo for '$shell_user'."
     echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$sudoers_file"
+    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" | sudo tee $sudoers_file > /dev/null
     # Set the correct permissions for the sudoers file
     chmod 0440 "$sudoers_file"
   fi
@@ -76,8 +78,8 @@ fi
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
 sudo $XCODE_BIN/xcodebuild -license accept
 
-log_warn "installing Rosetta"
-softwareupdate --install-rosetta
+#log_warn "installing Rosetta"
+#softwareupdate --install-rosetta
 
 log_warn "Validating local Homebrew, Ansible installs, (installing if not available ) "
 
@@ -89,6 +91,8 @@ echo >&2 "Homebrew not present on system, installing... "; \
 #setup home-brew
 echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$USER/.zprofile
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 
 command -v ansible >/dev/null 2>&1 || { \
 echo >&2 "Ansible not present on the system, installing"; \
