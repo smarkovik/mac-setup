@@ -8,7 +8,7 @@
       become: no
       tasks:
 
-        # print full ansible environment.
+      # print full ansible environment.
       - debug: var=ansible_facts
 
       - name: "Allow local sudo without password"
@@ -36,6 +36,8 @@
            git config --global user.email "smarkovik@gmail.com"
            git config --global apply.whitespace nowarn
            git config --global pager.branch false
+           git config --global color.ui auto
+           git config --global core.editor nano
            
         args:
           executable: /bin/bash
@@ -48,13 +50,9 @@
            - "dropbox"
            - "google-drive"
            - "visual-studio-code"
-           #- "android-studio"
-           #- "postman"
-           #- "proxyman"
            - "whatsapp"
            - "viber"
            - "slack" 
-           #- "tunnelblick"
            - "microsoft-edge"
            - "brave-browser"
            - "gitup"
@@ -62,7 +60,7 @@
 
       - name: "Install cli tools"
         homebrew:
-          name: ['sloccount', 'mc', 'git-lfs', 'ffmpeg', 'openjdk', 'wget', 'tree', 'npm']
+          name: ['mc', 'git-lfs', 'ffmpeg', 'wget', 'tree', 'npm']
 
       - name: "Setup Mac UI level changes to my preferences"
         shell: |
@@ -70,6 +68,8 @@
           chflags nohidden ~/Library
           
           #Finder changes
+          defaults write com.apple.finder _FXSortFoldersFirst -boolean true
+          defaults write com.apple.finder _FXShowPosixPathInTitle -boolean true
           defaults write com.apple.finder AppleShowAllFiles yes
           defaults write com.apple.finder QLEnableTextSelection -bool true
           defaults write com.apple.finder ShowRecentTags -bool false
@@ -93,6 +93,8 @@
           defaults write com.apple.dock expose-animation-duration -float 0.12
           defaults write com.apple.dock minimize-to-application -bool true
           defaults write com.apple.dock persistent-others -array-add '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+          defaults write com.apple.dock orientation left
+
 
           #Menu
           defaults write com.apple.menuextra.battery ShowPercent -string "YES"
@@ -258,6 +260,8 @@
             "/System/Library/CoreServices/Menu Extras/Displays.menu" \
             "/System/Library/CoreServices/Menu Extras/Volume.menu"
 
+           killall Dock; killall Finder
+
         args:
           executable: /bin/bash
 
@@ -272,8 +276,8 @@
           # Reveal IP address, hostname, OS version, etc. when clicking the clock
           # in the login window
           defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
-          # Set system timezone to Paris
-          systemsetup -settimezone "Europe/Brussels" > /dev/null
+          # Set system timezone to GMT+2
+          systemsetup -settimezone "Europe/Paris" > /dev/null
 
         args:
           executable: /bin/bash
