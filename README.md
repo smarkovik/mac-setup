@@ -13,6 +13,6 @@ To run download the code and execute
 
 OR 
 
-use this 1-liner directly from the terminal without even downloading :
+use this 1-liner directly from the terminal, copy -> paste and follow the prompts :
 
 ```sh cd /tmp; curl -L -o master.zip https://github.com/smarkovik/mac-setup/archive/refs/heads/main.zip; unzip master.zip; cd mac-setup-main; sh ./mac-setup.sh```
