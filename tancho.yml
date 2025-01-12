@@ -11,11 +11,11 @@
       # print full ansible environment.
       - debug: var=ansible_facts
 
-      - name: "Allow local sudo without password"
-        copy:
-          content: "{{ ansible_user_id }} ALL=(ALL) NOPASSWD: ALL"
-          dest: "/private/etc/sudoers.d/{{ ansible_user_id }}"
-        become: yes
+#      - name: "Allow local sudo without password"
+#        copy:
+#          content: "{{ ansible_user_id }} ALL=(ALL) NOPASSWD: ALL"
+#          dest: "/private/etc/sudoers.d/{{ ansible_user_id }}"
+#        become: yes
 
       - name: "Create home folder structure"
         file:
@@ -265,20 +265,20 @@
         args:
           executable: /bin/bash
 
-      - name: "Setup Mac System level changes to my preferences"
-        shell: |
-          # Enable lid wakeup
-          pmset -a lidwake 1
-          # Disable machine sleep while charging
-          pmset -c sleep 0
-          # Disable the sound effects on boot
-          nvram SystemAudioVolume=" "
-          # Reveal IP address, hostname, OS version, etc. when clicking the clock
-          # in the login window
-          defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
-          # Set system timezone to GMT+2
-          systemsetup -settimezone "Europe/Paris" > /dev/null
+#      - name: "Setup Mac System level changes to my preferences"
+#        shell: |
+#          # Enable lid wakeup
+#          pmset -a lidwake 1
+#          # Disable machine sleep while charging
+#          pmset -c sleep 0
+#          # Disable the sound effects on boot
+#          nvram SystemAudioVolume=" "
+#          # Reveal IP address, hostname, OS version, etc. when clicking the clock
+#          # in the login window
+#          defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+#          # Set system timezone to GMT+2
+#          systemsetup -settimezone "Europe/Paris" > /dev/null
 
-        args:
-          executable: /bin/bash
-        become: yes 
+#        args:
+#          executable: /bin/bash
+#        become: yes 
