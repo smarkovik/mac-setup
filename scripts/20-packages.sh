@@ -7,6 +7,12 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 BREWFILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/Brewfile"
 
 if ! have brew; then
+    # On a fresh machine a --dry-run has not actually installed brew, so this
+    # is expected rather than an error: report and move on.
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] brew not present yet; would apply %s\n' "$BREWFILE"
+        exit 0
+    fi
     log_error "brew not on PATH - run the homebrew step first"
     exit 1
 fi

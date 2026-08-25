@@ -8,9 +8,14 @@ BREW_BIN=/opt/homebrew/bin/brew
 
 if have brew; then
     log_skip "Homebrew already installed"
+elif [ "${DRY_RUN:-0}" = "1" ]; then
+    # NOTE: do not wrap this in `run`. The command substitution would be
+    # expanded before `run` ever saw it, so a dry run would fetch and print
+    # the entire installer.
+    printf '     [dry-run] would install Homebrew via the official install.sh\n'
 else
     log_info "Homebrew not present, installing (its installer handles the Command Line Tools)"
-    run /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
 if [ "${DRY_RUN:-0}" = "1" ] && [ ! -x "$BREW_BIN" ]; then

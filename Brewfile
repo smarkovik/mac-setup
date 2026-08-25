@@ -4,6 +4,19 @@
 # re-running installs it; `brew bundle cleanup` reports what is installed but no
 # longer listed here.
 
+# --- ai / coding -------------------------------------------------------------
+# The Claude desktop app, which is where Claude Code's desktop experience lives.
+# NOTE: the cask literally named "claude-code" is the *terminal* CLI (it installs
+# a `claude` binary, no app), so it is deliberately not the one used here.
+cask "claude"
+cask "cursor"
+# The Ollama desktop app. This also installs the `ollama` CLI binary, so it
+# covers both the GUI and running a local server for opencode to talk to.
+# For CLI/server only and no app, swap this for: brew "ollama"
+cask "ollama-app"
+# AI coding agent for the terminal.
+brew "opencode"
+
 # --- apps --------------------------------------------------------------------
 cask "google-chrome"
 cask "dropbox"
@@ -24,3 +37,7 @@ brew "wget"
 brew "tree"
 # npm ships inside the node formula; there is no standalone `npm` formula.
 brew "node"
+# Latest CPython, not the one Apple ships. The `python` alias tracks whatever
+# Homebrew currently considers current (3.14 as of writing), so this keeps
+# following it rather than pinning. See scripts/25-python.sh for the PATH side.
+brew "python"

@@ -10,9 +10,17 @@ if [ -d "$HOME/.oh-my-zsh" ]; then
     exit 0
 fi
 
+if [ "${DRY_RUN:-0}" = "1" ]; then
+    # NOTE: do not wrap this in `run`. The command substitution would be
+    # expanded before `run` ever saw it, so a dry run would fetch and print
+    # the entire installer.
+    printf '     [dry-run] would install oh-my-zsh via the official install.sh\n'
+    exit 0
+fi
+
 log_info "installing oh-my-zsh"
 # --unattended stops the installer from running `exec zsh` at the end, which
 # would replace this process before the remaining steps run.
-run /bin/bash -c \
+/bin/bash -c \
     "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" \
     "" --unattended
