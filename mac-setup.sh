@@ -2,8 +2,6 @@
 
 # exit on error
 set -e
-# Xcode location on disk
-XCODE_BIN=/usr/bin
 
 CURRENT_DIR=$(pwd)
 
@@ -45,16 +43,7 @@ if [ ! -f "$CURRENT_DIR/tancho.yml" ]; then
 fi
 log_info "ansible playbook found: tancho.yml"
 
-log_warn "Pointing the developer dir at Xcode (SUDO action, will require password)"
-# This must happen before any xcodebuild call: if the active developer dir is
-# still the Command Line Tools, xcodebuild errors with
-# "tool 'xcodebuild' requires Xcode".
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-
-log_warn "Checking for XCode install"
-"$XCODE_BIN/xcodebuild" -runFirstLaunch
-
-#add passwordless sudo 
+#add passwordless sudo
 
 # Find the currently logged-in user
 shell_user=$(whoami)
@@ -84,9 +73,6 @@ else
   fi
   rm -f "$tmp_sudoers_file"
 fi
-
-log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
-sudo "$XCODE_BIN/xcodebuild" -license accept
 
 #log_warn "installing Rosetta"
 #softwareupdate --install-rosetta
