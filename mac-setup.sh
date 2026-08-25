@@ -1,13 +1,11 @@
-#!/bin/sh 
+#!/bin/bash
 
 # exit on error
 set -e
-# Xcode location on disk 
+# Xcode location on disk
 XCODE_BIN=/usr/bin
-# USER=$(whoami) // system defined
 
-
-CURRET_DIR=$(pwd)
+CURRENT_DIR=$(pwd)
 
 #defining bash colors for user input
 NOCOLOR='\033[0m'
@@ -39,9 +37,9 @@ log_error(){
 # Check for user required information needed for ansible
 printf "\n\n"
 
-if [ ! -f $CURRET_DIR/tancho.yml ]; then
+if [ ! -f "$CURRENT_DIR/tancho.yml" ]; then
     log_error "Ansible playbook not found, aborting! \n     (No changes were applied to the system)"
-    exit -1
+    exit 1
 fi
 log_info "ansible playbook found: tancho.yml"
 log_warn "Checking for XCode install"
@@ -62,17 +60,21 @@ fi
 # Create the sudoers file for the user
 sudoers_file="$sudoers_dir/$shell_user"
 
-if [ -f "$sudoers_file" ]; then
-  # Check if the user already has the "NOPASSWD" entry
-  if grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
-    echo "The user '$shell_user' already has passwordless sudo privileges."
+# Check if the user already has the "NOPASSWD" entry
+if [ -f "$sudoers_file" ] && grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
+  echo "The user '$shell_user' already has passwordless sudo privileges."
+else
+  echo "Granting passwordless sudo for '$shell_user'."
+  tmp_sudoers_file=$(mktemp)
+  echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$tmp_sudoers_file"
+  if sudo visudo -cf "$tmp_sudoers_file"; then
+    sudo install -m 0440 "$tmp_sudoers_file" "$sudoers_file"
   else
-    echo "The sudoers file exists, but it does not have passwordless sudo for '$shell_user'."
-    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$sudoers_file"
-    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" | sudo tee $sudoers_file > /dev/null
-    # Set the correct permissions for the sudoers file
-    chmod 0440 "$sudoers_file"
+    log_error "Generated sudoers entry failed validation, aborting"
+    rm -f "$tmp_sudoers_file"
+    exit 1
   fi
+  rm -f "$tmp_sudoers_file"
 fi
 
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
@@ -89,7 +91,8 @@ echo >&2 "Homebrew not present on system, installing... "; \
 }
 
 #setup home-brew
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$USER/.zprofile
+grep -qxF 'eval "$(/opt/homebrew/bin/brew shellenv)"' "$HOME/.zprofile" 2>/dev/null || \
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
@@ -102,12 +105,16 @@ brew install ansible; \
 printf "Brew and Ansible already present or freshly installed, moving on. \n"
 
 log_info "running the ansible playbook"
-ansible-playbook $CURRET_DIR/tancho.yml
+ansible-playbook "$CURRENT_DIR/tancho.yml"
 
 log_info "generating SSH key for github"
-ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -P ""
+if [ -f "$HOME/.ssh/id_rsa" ]; then
+    log_warn "SSH key already exists at $HOME/.ssh/id_rsa, skipping generation"
+else
+    ssh-keygen -t rsa -f "$HOME/.ssh/id_rsa" -q -P ""
+fi
 echo "paste this in github.com/setting/sshkeys"
-cat $HOME/.ssh/id_rsa.pub
+cat "$HOME/.ssh/id_rsa.pub"
 
 log_warn "Looking for oh-my-zsh..."
 ohmyzsh='.oh-my-zs'
@@ -115,6 +122,6 @@ if [[ $ZSH == *"$ohmyzsh"* ]]; then
     echo "ZSH is alredy there, skipping install"
 else
     log_info "installing oh my zsh"
-    /bin/sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 

@@ -23,12 +23,12 @@
           state: directory
           mode: 0775
         with_items:
-          - $HOME/bin
-          - $HOME/Development/repos
-          - $HOME/Development/bin
-          - $HOME/Development/tools
-          - $HOME/Development/tests
-          - $HOME/Pictures/Screenshots
+          - "{{ ansible_env.HOME }}/bin"
+          - "{{ ansible_env.HOME }}/Development/repos"
+          - "{{ ansible_env.HOME }}/Development/bin"
+          - "{{ ansible_env.HOME }}/Development/tools"
+          - "{{ ansible_env.HOME }}/Development/tests"
+          - "{{ ansible_env.HOME }}/Pictures/Screenshots"
 
       - name: "Setup GIT user vars"
         shell: |
@@ -43,7 +43,7 @@
           executable: /bin/bash
 
       - name: "Install DMGs"
-        homebrew_cask:
+        community.general.homebrew_cask:
           name: "{{ item }}"
         with_items:
            - "google-chrome"
