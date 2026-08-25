@@ -4,8 +4,6 @@
 set -e
 # Xcode location on disk
 XCODE_BIN=/usr/bin
-USER=$(whoami)
-
 
 CURRENT_DIR=$(pwd)
 
@@ -62,16 +60,21 @@ fi
 # Create the sudoers file for the user
 sudoers_file="$sudoers_dir/$shell_user"
 
-if [ -f "$sudoers_file" ]; then
-  # Check if the user already has the "NOPASSWD" entry
-  if grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
-    echo "The user '$shell_user' already has passwordless sudo privileges."
+# Check if the user already has the "NOPASSWD" entry
+if [ -f "$sudoers_file" ] && grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
+  echo "The user '$shell_user' already has passwordless sudo privileges."
+else
+  echo "Granting passwordless sudo for '$shell_user'."
+  tmp_sudoers_file=$(mktemp)
+  echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$tmp_sudoers_file"
+  if sudo visudo -cf "$tmp_sudoers_file"; then
+    sudo install -m 0440 "$tmp_sudoers_file" "$sudoers_file"
   else
-    echo "The sudoers file exists, but it does not have passwordless sudo for '$shell_user'."
-    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" | sudo tee "$sudoers_file" > /dev/null
-    # Set the correct permissions for the sudoers file
-    sudo chmod 0440 "$sudoers_file"
+    log_error "Generated sudoers entry failed validation, aborting"
+    rm -f "$tmp_sudoers_file"
+    exit 1
   fi
+  rm -f "$tmp_sudoers_file"
 fi
 
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
@@ -88,7 +91,8 @@ echo >&2 "Homebrew not present on system, installing... "; \
 }
 
 #setup home-brew
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
+grep -qxF 'eval "$(/opt/homebrew/bin/brew shellenv)"' "$HOME/.zprofile" 2>/dev/null || \
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
@@ -118,6 +122,6 @@ if [[ $ZSH == *"$ohmyzsh"* ]]; then
     echo "ZSH is alredy there, skipping install"
 else
     log_info "installing oh my zsh"
-    /bin/sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
