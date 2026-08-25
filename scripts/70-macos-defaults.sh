@@ -133,6 +133,44 @@ defaults write com.apple.ActivityMonitor ShowCategory -int 0
 defaults write com.apple.ActivityMonitor SortColumn -string "CPUUsage"
 defaults write com.apple.ActivityMonitor SortDirection -int 0
 
+# --- legacy / no longer effective --------------------------------------------
+# These were in the original playbook. I believe each is now a no-op on current
+# macOS, so they are kept here, disabled, with the reason - rather than deleted
+# silently. Verify before re-enabling; if one still works for you, move it up.
+#
+#   # Safari's preferences are TCC-protected since Mojave. `defaults write`
+#   # against com.apple.Safari silently does nothing unless the terminal has
+#   # Full Disk Access.
+#   defaults write com.apple.Safari UniversalSearchEnabled -bool false
+#   defaults write com.apple.Safari SuppressSearchSuggestions -bool true
+#   defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
+#
+#   # Screen-saver password settings moved to a protected domain; setting them
+#   # via `defaults` no longer takes effect. Use System Settings > Lock Screen.
+#   defaults write com.apple.screensaver askForPassword -int 1
+#   defaults write com.apple.screensaver askForPasswordDelay -int 0
+#
+#   # Subpixel antialiasing was removed in Mojave; this key does nothing.
+#   defaults write -g AppleFontSmoothing -int 1
+#
+#   # The menu-bar battery item moved to Control Center in Big Sur; ShowTime is
+#   # no longer read. Use System Settings > Control Center > Battery.
+#   defaults write com.apple.menuextra.battery ShowTime -bool true
+#
+#   # This key predates AAC/LDAC negotiation on modern macOS and no longer
+#   # affects Bluetooth audio quality.
+#   defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
+#
+#   # Dashboard was removed in Catalina.
+#   defaults write com.apple.dashboard devmode -bool true
+#
+#   # Secure Empty Trash was removed when APFS shipped.
+#   defaults write com.apple.finder EmptyTrashSecurely -bool true
+#
+#   # menuExtras has had no effect since Big Sur moved the menu bar to
+#   # Control Center.
+#   defaults write com.apple.systemuiserver menuExtras -array ...
+
 # --- restart affected apps ---------------------------------------------------
 # `|| true` because killall exits non-zero when the process is not running.
 for app in Dock Finder SystemUIServer; do

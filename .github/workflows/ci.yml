@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Syntax check
+        run: |
+          for f in mac-setup.sh scripts/*.sh; do
+            bash -n "$f"
+          done
+
+      # SC2028 (echo does not expand escape sequences) is exactly the class of
+      # bug that shipped here before this job existed.
+      - name: shellcheck
+        run: shellcheck --severity=warning mac-setup.sh scripts/*.sh
+
+  idempotency:
+    name: second run is a no-op
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CLI surface
+        run: |
+          ./mac-setup.sh --help
+          ./mac-setup.sh --list
+          # An unknown step must be rejected, not silently ignored.
+          if ./mac-setup.sh --only definitely-not-a-step; then
+            echo "unknown step was accepted" >&2
+            exit 1
+          fi
+
+      # The steps that do not need macOS must be no-ops on a second run. This
+      # is the property that makes the script safe to run repeatedly.
+      - name: Run twice, assert the second run changes nothing
+        run: |
+          export HOME="$(mktemp -d)"
+          git config --global user.email ci@example.com || true
+          git config --global user.name CI || true
+          git config --global --unset user.email
+          git config --global --unset user.name
+
+          ./mac-setup.sh --only dirs --only git > /dev/null
+          ./mac-setup.sh --only dirs --only git 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | tee second-run.log
+
+          if grep -qE '^\s+===> (creating|setting)' second-run.log; then
+            echo "second run performed work - steps are not idempotent" >&2
+            exit 1
+          fi
+          echo "second run was clean"
