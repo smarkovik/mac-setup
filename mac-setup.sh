@@ -1,13 +1,13 @@
-#!/bin/sh 
+#!/bin/bash
 
 # exit on error
 set -e
-# Xcode location on disk 
+# Xcode location on disk
 XCODE_BIN=/usr/bin
-# USER=$(whoami) // system defined
+USER=$(whoami)
 
 
-CURRET_DIR=$(pwd)
+CURRENT_DIR=$(pwd)
 
 #defining bash colors for user input
 NOCOLOR='\033[0m'
@@ -39,9 +39,9 @@ log_error(){
 # Check for user required information needed for ansible
 printf "\n\n"
 
-if [ ! -f $CURRET_DIR/tancho.yml ]; then
+if [ ! -f "$CURRENT_DIR/tancho.yml" ]; then
     log_error "Ansible playbook not found, aborting! \n     (No changes were applied to the system)"
-    exit -1
+    exit 1
 fi
 log_info "ansible playbook found: tancho.yml"
 log_warn "Checking for XCode install"
@@ -68,10 +68,9 @@ if [ -f "$sudoers_file" ]; then
     echo "The user '$shell_user' already has passwordless sudo privileges."
   else
     echo "The sudoers file exists, but it does not have passwordless sudo for '$shell_user'."
-    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$sudoers_file"
-    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" | sudo tee $sudoers_file > /dev/null
+    echo "$shell_user ALL=(ALL) NOPASSWD: ALL" | sudo tee "$sudoers_file" > /dev/null
     # Set the correct permissions for the sudoers file
-    chmod 0440 "$sudoers_file"
+    sudo chmod 0440 "$sudoers_file"
   fi
 fi
 
@@ -89,7 +88,7 @@ echo >&2 "Homebrew not present on system, installing... "; \
 }
 
 #setup home-brew
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/$USER/.zprofile
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
@@ -102,12 +101,16 @@ brew install ansible; \
 printf "Brew and Ansible already present or freshly installed, moving on. \n"
 
 log_info "running the ansible playbook"
-ansible-playbook $CURRET_DIR/tancho.yml
+ansible-playbook "$CURRENT_DIR/tancho.yml"
 
 log_info "generating SSH key for github"
-ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -q -P ""
+if [ -f "$HOME/.ssh/id_rsa" ]; then
+    log_warn "SSH key already exists at $HOME/.ssh/id_rsa, skipping generation"
+else
+    ssh-keygen -t rsa -f "$HOME/.ssh/id_rsa" -q -P ""
+fi
 echo "paste this in github.com/setting/sshkeys"
-cat $HOME/.ssh/id_rsa.pub
+cat "$HOME/.ssh/id_rsa.pub"
 
 log_warn "Looking for oh-my-zsh..."
 ohmyzsh='.oh-my-zs'
