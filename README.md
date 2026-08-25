@@ -2,7 +2,7 @@
 
 **This is my personal machine setup, feel free to use, copy, clone, and contribute. **
 
-_Note: Pre-requisit = Install XCode via AppStore._
+_Note: no prerequisites. Homebrew installs the Xcode Command Line Tools itself if they are missing._
 
 Hope you like it. 
 

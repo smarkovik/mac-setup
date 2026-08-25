@@ -91,7 +91,11 @@
           defaults write com.apple.Dock showhidden -bool yes 
           defaults write com.apple.dock expose-animation-duration -float 0.12
           defaults write com.apple.dock minimize-to-application -bool true
-          defaults write com.apple.dock persistent-others -array-add '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+          # NOTE: -array-add APPENDS, so running this repeatedly stacks up
+          # duplicate tiles. Only add the recents tile if it is not there yet.
+          if ! defaults read com.apple.dock persistent-others 2>/dev/null | grep -q 'recents-tile'; then
+            defaults write com.apple.dock persistent-others -array-add '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+          fi
           defaults write com.apple.dock orientation left
 
 
