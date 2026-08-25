@@ -1,127 +1,86 @@
 #!/bin/bash
+#
+# mac-setup - provision this Mac, repeatably.
+#
+# Every step is idempotent: run it as often as you like. Steps that have
+# nothing to do say so and exit.
+#
+#   ./mac-setup.sh                      run every default step
+#   ./mac-setup.sh --dry-run            show what would happen, change nothing
+#   ./mac-setup.sh --list               list the steps
+#   ./mac-setup.sh --only macos-defaults [--only git ...]
+#   ./mac-setup.sh --force              re-apply steps that would be skipped
+#
+set -euo pipefail
 
-# exit on error
-set -e
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$REPO_DIR/scripts/lib.sh"
 
-CURRENT_DIR=$(pwd)
+# Ordered. Name -> script. Anything not listed here (e.g. passwordless-sudo)
+# is opt-in via --only.
+STEP_NAMES=(homebrew packages dirs git ssh zsh macos-defaults)
 
-#defining bash colors for user input
-NOCOLOR='\033[0m'
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-ORANGE='\033[0;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-LIGHTGRAY='\033[0;37m'
-DARKGRAY='\033[1;30m'
-LIGHTRED='\033[1;31m'
-LIGHTGREEN='\033[1;32m'
-YELLOW='\033[1;33m'
-LIGHTBLUE='\033[1;34m'
-LIGHTPURPLE='\033[1;35m'
-LIGHTCYAN='\033[1;36m'
-WHITE='\033[1;37m'
-
-# NOTE: use printf '%b' so the \033 escapes above are interpreted.
-# Plain `echo` in bash prints them literally.
-log_info(){
-    printf '%b\n' "${LIGHTGREEN} ===> $1 ${NOCOLOR}"
+step_script() {
+    case "$1" in
+        homebrew)          echo "10-homebrew.sh" ;;
+        packages)          echo "20-packages.sh" ;;
+        dirs)              echo "30-dirs.sh" ;;
+        git)               echo "40-git.sh" ;;
+        ssh)               echo "50-ssh.sh" ;;
+        zsh)               echo "60-zsh.sh" ;;
+        macos-defaults)    echo "70-macos-defaults.sh" ;;
+        passwordless-sudo) echo "90-passwordless-sudo.sh" ;;
+        *)                 return 1 ;;
+    esac
 }
-log_warn(){
-    printf '%b\n' "${ORANGE} ===> $1 ${NOCOLOR}"
+
+usage() {
+    # Print the header comment block, stopping at the first non-comment line.
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "${BASH_SOURCE[0]}"
 }
-log_error(){
-    printf '%b\n' "${LIGHTRED} ===> $1 ${NOCOLOR}"
-}
-# Check for user required information needed for ansible
-printf "\n\n"
 
-if [ ! -f "$CURRENT_DIR/tancho.yml" ]; then
-    log_error "Ansible playbook not found, aborting! \n     (No changes were applied to the system)"
-    exit 1
-fi
-log_info "ansible playbook found: tancho.yml"
+export DRY_RUN=0
+export FORCE=0
+ONLY=()
 
-#add passwordless sudo
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --dry-run) DRY_RUN=1 ;;
+        --force)   FORCE=1 ;;
+        --list)
+            printf 'default steps:\n'
+            for s in "${STEP_NAMES[@]}"; do printf '  %s\n' "$s"; done
+            printf 'opt-in steps:\n  passwordless-sudo\n'
+            exit 0
+            ;;
+        --only)
+            shift
+            [ $# -gt 0 ] || { log_error "--only needs a step name"; exit 2; }
+            step_script "$1" >/dev/null || { log_error "unknown step: $1"; exit 2; }
+            ONLY+=("$1")
+            ;;
+        -h|--help) usage; exit 0 ;;
+        *) log_error "unknown option: $1"; usage; exit 2 ;;
+    esac
+    shift
+done
 
-# Find the currently logged-in user
-shell_user=$(whoami)
-
-# Ensure sudoers.d directory exists
-sudoers_dir="/private/etc/sudoers.d"
-if [ ! -d "$sudoers_dir" ]; then
-  echo "Creating sudoers.d directory..."
-  sudo mkdir -p "$sudoers_dir"
-fi
-# Create the sudoers file for the user
-sudoers_file="$sudoers_dir/$shell_user"
-
-# Check if the user already has the "NOPASSWD" entry
-if [ -f "$sudoers_file" ] && grep -q "$shell_user ALL=(ALL) NOPASSWD: ALL" "$sudoers_file"; then
-  echo "The user '$shell_user' already has passwordless sudo privileges."
+if [ "${#ONLY[@]}" -gt 0 ]; then
+    STEPS=("${ONLY[@]}")
 else
-  echo "Granting passwordless sudo for '$shell_user'."
-  tmp_sudoers_file=$(mktemp)
-  echo "$shell_user ALL=(ALL) NOPASSWD: ALL" > "$tmp_sudoers_file"
-  if sudo visudo -cf "$tmp_sudoers_file"; then
-    sudo install -m 0440 "$tmp_sudoers_file" "$sudoers_file"
-  else
-    log_error "Generated sudoers entry failed validation, aborting"
-    rm -f "$tmp_sudoers_file"
-    exit 1
-  fi
-  rm -f "$tmp_sudoers_file"
+    STEPS=("${STEP_NAMES[@]}")
 fi
 
-#log_warn "installing Rosetta"
-#softwareupdate --install-rosetta
+[ "$DRY_RUN" = "1" ] && log_warn "dry run - nothing will be changed"
 
-log_warn "Validating local Homebrew, Ansible installs, (installing if not available ) "
+for name in "${STEPS[@]}"; do
+    script="$REPO_DIR/scripts/$(step_script "$name")"
+    if [ ! -f "$script" ]; then
+        log_error "missing step script: $script"
+        exit 1
+    fi
+    log_step "$name"
+    bash "$script"
+done
 
-command -v brew >/dev/null 2>&1 || { \
-echo >&2 "Homebrew not present on system, installing... "; \
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
-}
-
-#setup home-brew (Apple Silicon prefix)
-BREW_BIN=/opt/homebrew/bin/brew
-if [ ! -x "$BREW_BIN" ]; then
-    log_error "Homebrew not found at $BREW_BIN after install, aborting"
-    exit 1
-fi
-grep -qxF "eval \"\$($BREW_BIN shellenv)\"" "$HOME/.zprofile" 2>/dev/null || \
-    echo "eval \"\$($BREW_BIN shellenv)\"" >> "$HOME/.zprofile"
-eval "$($BREW_BIN shellenv)"
-
-command -v ansible >/dev/null 2>&1 || { \
-echo >&2 "Ansible not present on the system, installing"; \
-brew install ansible; \
-}
-
-printf "Brew and Ansible already present or freshly installed, moving on. \n"
-
-log_info "running the ansible playbook"
-ansible-playbook "$CURRENT_DIR/tancho.yml"
-
-log_info "generating SSH key for github"
-if [ -f "$HOME/.ssh/id_rsa" ]; then
-    log_warn "SSH key already exists at $HOME/.ssh/id_rsa, skipping generation"
-else
-    ssh-keygen -t rsa -f "$HOME/.ssh/id_rsa" -q -P ""
-fi
-echo "paste this in github.com/setting/sshkeys"
-cat "$HOME/.ssh/id_rsa.pub"
-
-log_warn "Looking for oh-my-zsh..."
-# Check the install dir directly. $ZSH is only set inside an interactive zsh
-# session that has already sourced oh-my-zsh, so it is always empty here.
-if [ -d "$HOME/.oh-my-zsh" ]; then
-    echo "oh-my-zsh is already there, skipping install"
-else
-    log_info "installing oh my zsh"
-    # --unattended stops the installer from running `exec zsh` at the end,
-    # which would replace this script's process before it finishes.
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-fi
-
+log_info "done"
