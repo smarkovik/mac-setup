@@ -25,14 +25,16 @@ LIGHTPURPLE='\033[1;35m'
 LIGHTCYAN='\033[1;36m'
 WHITE='\033[1;37m'
 
+# NOTE: use printf '%b' so the \033 escapes above are interpreted.
+# Plain `echo` in bash prints them literally.
 log_info(){
-    echo "${LIGHTGREEN} ===> $1 ${NOCOLOR}"
+    printf '%b\n' "${LIGHTGREEN} ===> $1 ${NOCOLOR}"
 }
 log_warn(){
-    echo "${ORANGE} ===> $1 ${NOCOLOR}"
+    printf '%b\n' "${ORANGE} ===> $1 ${NOCOLOR}"
 }
 log_error(){
-    echo "${LIGHTRED} ===> $1 ${NOCOLOR}"
+    printf '%b\n' "${LIGHTRED} ===> $1 ${NOCOLOR}"
 }
 # Check for user required information needed for ansible
 printf "\n\n"
@@ -42,9 +44,15 @@ if [ ! -f "$CURRENT_DIR/tancho.yml" ]; then
     exit 1
 fi
 log_info "ansible playbook found: tancho.yml"
+
+log_warn "Pointing the developer dir at Xcode (SUDO action, will require password)"
+# This must happen before any xcodebuild call: if the active developer dir is
+# still the Command Line Tools, xcodebuild errors with
+# "tool 'xcodebuild' requires Xcode".
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
 log_warn "Checking for XCode install"
-xcodebuild -runFirstLaunch
-#$XCODE_BIN/xcodebuild -version
+"$XCODE_BIN/xcodebuild" -runFirstLaunch
 
 #add passwordless sudo 
 
@@ -55,7 +63,7 @@ shell_user=$(whoami)
 sudoers_dir="/private/etc/sudoers.d"
 if [ ! -d "$sudoers_dir" ]; then
   echo "Creating sudoers.d directory..."
-  mkdir -p "$sudoers_dir"
+  sudo mkdir -p "$sudoers_dir"
 fi
 # Create the sudoers file for the user
 sudoers_file="$sudoers_dir/$shell_user"
@@ -78,7 +86,7 @@ else
 fi
 
 log_warn "Accepting Xcode License if not accepted already (SUDO action, will require password)"
-sudo $XCODE_BIN/xcodebuild -license accept
+sudo "$XCODE_BIN/xcodebuild" -license accept
 
 #log_warn "installing Rosetta"
 #softwareupdate --install-rosetta
@@ -90,12 +98,15 @@ echo >&2 "Homebrew not present on system, installing... "; \
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
 }
 
-#setup home-brew
-grep -qxF 'eval "$(/opt/homebrew/bin/brew shellenv)"' "$HOME/.zprofile" 2>/dev/null || \
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
-eval "$(/opt/homebrew/bin/brew shellenv)"
-
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+#setup home-brew (Apple Silicon prefix)
+BREW_BIN=/opt/homebrew/bin/brew
+if [ ! -x "$BREW_BIN" ]; then
+    log_error "Homebrew not found at $BREW_BIN after install, aborting"
+    exit 1
+fi
+grep -qxF "eval \"\$($BREW_BIN shellenv)\"" "$HOME/.zprofile" 2>/dev/null || \
+    echo "eval \"\$($BREW_BIN shellenv)\"" >> "$HOME/.zprofile"
+eval "$($BREW_BIN shellenv)"
 
 command -v ansible >/dev/null 2>&1 || { \
 echo >&2 "Ansible not present on the system, installing"; \
@@ -117,11 +128,14 @@ echo "paste this in github.com/setting/sshkeys"
 cat "$HOME/.ssh/id_rsa.pub"
 
 log_warn "Looking for oh-my-zsh..."
-ohmyzsh='.oh-my-zs'
-if [[ $ZSH == *"$ohmyzsh"* ]]; then
-    echo "ZSH is alredy there, skipping install"
+# Check the install dir directly. $ZSH is only set inside an interactive zsh
+# session that has already sourced oh-my-zsh, so it is always empty here.
+if [ -d "$HOME/.oh-my-zsh" ]; then
+    echo "oh-my-zsh is already there, skipping install"
 else
     log_info "installing oh my zsh"
-    /bin/bash -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    # --unattended stops the installer from running `exec zsh` at the end,
+    # which would replace this script's process before it finishes.
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 fi
 
