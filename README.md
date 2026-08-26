@@ -74,13 +74,15 @@ Apple's remains at `/usr/bin/python3` if you need it explicitly.
 
 ### If you are not me
 
-Fork it. Two things are mine and you will want to change them:
+Fork it. Three things are mine and you will want to change them:
 
 - **git identity** in `scripts/40-git.sh`. It only fills in what is not already
   set, so it will not overwrite yours — but on a fresh machine you would get
   mine. Override with `GIT_USER_NAME` / `GIT_USER_EMAIL`, or just edit the file.
 - **macOS defaults** in `scripts/70-macos-defaults.sh` are my preferences,
   including `en_GB`/EUR/Centimeters locale settings.
+- **The `Brewfile`** is the set of apps I actually run. It is a plain list —
+  delete the lines you do not want.
 
 ### Passwordless sudo
 

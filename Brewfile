@@ -16,18 +16,29 @@ cask "cursor"
 cask "ollama-app"
 # AI coding agent for the terminal.
 brew "opencode"
+# Block's Goose. NOTE: the cask token is "block-goose", not "goose" - the
+# latter does not exist.
+cask "block-goose"
+
+# --- editors -----------------------------------------------------------------
+cask "visual-studio-code"
+cask "zed"
+
+# --- browsers ----------------------------------------------------------------
+cask "google-chrome"
+cask "microsoft-edge"
+cask "brave-browser"
 
 # --- apps --------------------------------------------------------------------
-cask "google-chrome"
+cask "1password"
 cask "dropbox"
-cask "google-drive"
-cask "visual-studio-code"
+cask "notion-calendar"
 cask "whatsapp"
 cask "viber"
 cask "slack"
-cask "microsoft-edge"
-cask "brave-browser"
-cask "gitup"
+# NOTE: the token is "gitup-app", not "gitup" - the latter does not exist.
+# This was carried over broken from the original Ansible playbook.
+cask "gitup-app"
 
 # --- cli ---------------------------------------------------------------------
 brew "mc"
