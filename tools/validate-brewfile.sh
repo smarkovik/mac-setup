@@ -44,12 +44,32 @@ check() {
 
 echo "validating $BREWFILE"
 
-while read -r kind token; do
+# Parsed in bash rather than with sed on purpose: BSD sed (which is what
+# macOS ships, and macOS is the only place this runs for real) does not
+# support `\|` alternation - that is a GNU extension. A sed-based parser
+# silently matched nothing here.
+while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+        cask\ *|brew\ *) ;;
+        *) continue ;;
+    esac
+
+    kind="${line%% *}"
+
+    # Take whatever sits between the first pair of double quotes.
+    case "$line" in
+        *'"'*'"'*) ;;
+        *) continue ;;
+    esac
+    rest="${line#*\"}"
+    token="${rest%%\"*}"
+    [ -n "$token" ] || continue
+
     case "$kind" in
         cask) check --cask "$token" ;;
         brew) check --formula "$token" ;;
     esac
-done < <(sed -n 's/^\(cask\|brew\) *"\([^"]*\)".*/\1 \2/p' "$BREWFILE")
+done < "$BREWFILE"
 
 echo
 if [ "$checked" -eq 0 ]; then
