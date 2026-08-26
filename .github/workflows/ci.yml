@@ -17,14 +17,14 @@ jobs:
 
       - name: Syntax check
         run: |
-          for f in mac-setup.sh scripts/*.sh; do
+          for f in mac-setup.sh scripts/*.sh tools/*.sh; do
             bash -n "$f"
           done
 
       # SC2028 (echo does not expand escape sequences) is exactly the class of
       # bug that shipped here before this job existed.
       - name: shellcheck
-        run: shellcheck --severity=warning mac-setup.sh scripts/*.sh
+        run: shellcheck --severity=warning mac-setup.sh scripts/*.sh tools/*.sh
 
   idempotency:
     name: second run is a no-op
@@ -60,3 +60,42 @@ jobs:
             exit 1
           fi
           echo "second run was clean"
+
+      # A failing step must say which one it was and how to resume, rather
+      # than dying silently under `set -e`.
+      - name: A failed step reports itself
+        run: |
+          # The python step exits non-zero on a machine with no Homebrew,
+          # which is exactly the failure we want to see reported.
+          set +e
+          ./mac-setup.sh --only python > out.log 2>&1
+          rc=$?
+          set -e
+          sed 's/\x1b\[[0-9;]*m//g' out.log
+
+          if [ "$rc" -eq 0 ]; then
+            echo "expected the step to fail on a machine without brew" >&2
+            exit 1
+          fi
+          if ! grep -q "step 'python' failed" out.log; then
+            echo "failure did not name the step" >&2
+            exit 1
+          fi
+          if ! grep -q -- "--only python" out.log; then
+            echo "failure did not say how to resume" >&2
+            exit 1
+          fi
+          echo "failed step reported itself correctly"
+
+  brewfile:
+    name: Brewfile tokens resolve
+    # Needs a real Homebrew, so this is the one job that wants macOS.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # `brew bundle` fails the entire file on one bad token, so a single typo
+      # takes every other package with it. `cask "gitup"` was wrong here for a
+      # long time (it is "gitup-app") because nothing checked.
+      - name: Validate every cask and formula
+        run: ./tools/validate-brewfile.sh
