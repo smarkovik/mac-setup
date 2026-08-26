@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets CI be re-run by hand from the Actions tab. Useful when a run needs
+  # repeating without a code change - including the case where GitHub simply
+  # never created one for a pushed head.
+  workflow_dispatch:
 
 jobs:
   lint:
