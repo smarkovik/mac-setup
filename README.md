@@ -44,6 +44,7 @@ in it has changed since the last run. `--force` overrides that.
 | `scripts/lib.sh` | Shared logging, dry-run and change-stamp helpers |
 | `scripts/10-homebrew.sh` | Install Homebrew, put it on `PATH` |
 | `scripts/20-packages.sh` | Apply the `Brewfile` |
+| `scripts/25-python.sh` | Put Homebrew's CPython ahead of Apple's on `PATH` |
 | `scripts/30-dirs.sh` | Home folder structure |
 | `scripts/40-git.sh` | Global git config |
 | `scripts/50-ssh.sh` | SSH key for GitHub |
@@ -59,6 +60,17 @@ Edit the `Brewfile` and re-run. To see what is installed but no longer listed:
 brew bundle cleanup --file=Brewfile            # report
 brew bundle cleanup --file=Brewfile --force    # actually uninstall
 ```
+
+### Python
+
+`brew "python"` tracks whatever Homebrew currently calls current, so this
+follows new releases rather than pinning a version.
+
+`python3` resolves to Homebrew's automatically, because the `brew shellenv` line
+puts `/opt/homebrew/bin` ahead of `/usr/bin`. Homebrew deliberately does not
+link an unversioned `python`/`pip`, so `scripts/25-python.sh` adds the formula's
+`libexec/bin` to `PATH` — that is what makes plain `python` and `pip` work.
+Apple's remains at `/usr/bin/python3` if you need it explicitly.
 
 ### If you are not me
 
