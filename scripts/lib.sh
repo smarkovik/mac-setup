@@ -54,16 +54,32 @@ _dread_expect() {
     esac
 }
 
+# Run `defaults`, optionally with -currentHost.
+#
+# NOTE: deliberately not an array of extra args. macOS ships bash 3.2, where
+# expanding an EMPTY array as "${arr[@]}" under `set -u` is an unbound-variable
+# error (fixed in bash 4.4). That construct aborted this script on the macOS
+# runner before it wrote a single setting, while working fine on bash 5 locally.
+_defaults() {
+    local ch="$1"
+    shift
+    if [ "$ch" = "1" ]; then
+        defaults -currentHost "$@"
+    else
+        defaults "$@"
+    fi
+}
+
 # dset [--currentHost] <domain> <key> <flag> <value>
 #   flag: -bool | -int | -float | -string
 dset() {
-    local host=()
-    if [ "$1" = "--currentHost" ]; then host=(-currentHost); shift; fi
+    local ch=0
+    if [ "$1" = "--currentHost" ]; then ch=1; shift; fi
     local domain="$1" key="$2" flag="$3" value="$4"
 
     local want have
     want="$(_dread_expect "$flag" "$value")"
-    have="$(defaults "${host[@]}" read "$domain" "$key" 2>/dev/null || true)"
+    have="$(_defaults "$ch" read "$domain" "$key" 2>/dev/null || true)"
 
     if [ "${FORCE:-0}" != "1" ]; then
         if [ "$flag" = "-float" ] && [ -n "$have" ]; then
@@ -80,7 +96,7 @@ dset() {
         printf '     [dry-run] would set %s %s = %s\n' "$domain" "$key" "$value"
     else
         log_info "$domain $key = $value"
-        defaults "${host[@]}" write "$domain" "$key" "$flag" "$value"
+        _defaults "$ch" write "$domain" "$key" "$flag" "$value"
     fi
     DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
 }

@@ -115,7 +115,14 @@ jobs:
 
       - name: Apply, then assert a second run changes nothing
         run: |
-          ./mac-setup.sh --only macos-defaults > first.log 2>&1
+          # Always show the first run's output. Without this, a failure in the
+          # very first command leaves no diagnostic at all - which is how a
+          # bash 3.2 incompatibility once showed up as a 40ms mystery.
+          if ! ./mac-setup.sh --only macos-defaults > first.log 2>&1; then
+            echo "--- first run failed ---" >&2
+            sed 's/\x1b\[[0-9;]*m//g' first.log >&2
+            exit 1
+          fi
           sed 's/\x1b\[[0-9;]*m//g' first.log | tail -3
 
           ./mac-setup.sh --only macos-defaults 2>&1 \
