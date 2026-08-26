@@ -61,6 +61,16 @@ brew bundle cleanup --file=Brewfile            # report
 brew bundle cleanup --file=Brewfile --force    # actually uninstall
 ```
 
+Before committing a new entry, check the token exists:
+
+```sh
+./tools/validate-brewfile.sh
+```
+
+`brew bundle` fails the **entire** file on one bad token, so a single typo
+takes every other package with it. CI runs this on a macOS runner for the same
+reason.
+
 ### Python
 
 `brew "python"` tracks whatever Homebrew currently calls current, so this

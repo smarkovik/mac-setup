@@ -11,7 +11,8 @@
 #   ./mac-setup.sh --only macos-defaults [--only git ...]
 #   ./mac-setup.sh --force              re-apply steps that would be skipped
 #
-set -euo pipefail
+# -E so the ERR trap below is inherited by functions and subshells.
+set -Eeuo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$REPO_DIR/scripts/lib.sh"
@@ -74,14 +75,32 @@ fi
 
 [ "$DRY_RUN" = "1" ] && log_warn "dry run - nothing will be changed"
 
+# Report which step died rather than just exiting silently under `set -e`.
+# Steps are independently re-runnable, so the useful thing to tell you is how
+# to resume from the one that broke.
+CURRENT_STEP=""
+on_failure() {
+    local rc=$?
+    if [ -n "$CURRENT_STEP" ]; then
+        printf '\n'
+        log_error "step '$CURRENT_STEP' failed (exit $rc)"
+        log_error "once it is fixed, re-run just that step:"
+        log_error "    ./mac-setup.sh --only $CURRENT_STEP"
+    fi
+    exit "$rc"
+}
+trap on_failure ERR
+
 for name in "${STEPS[@]}"; do
     script="$REPO_DIR/scripts/$(step_script "$name")"
     if [ ! -f "$script" ]; then
         log_error "missing step script: $script"
         exit 1
     fi
+    CURRENT_STEP="$name"
     log_step "$name"
     bash "$script"
 done
 
+CURRENT_STEP=""
 log_info "done"
