@@ -31,9 +31,12 @@ meant to be run repeatedly — not just once on a fresh laptop.
 ./mac-setup.sh --force                # re-apply steps that would be skipped
 ```
 
-The macOS defaults step restarts Dock, Finder and SystemUIServer, which closes
-your Finder windows — so it fingerprints itself and skips entirely when nothing
-in it has changed since the last run. `--force` overrides that.
+The macOS defaults step compares every setting against its live value and writes
+only what differs, so it **converges**: change something in System Settings and
+the next run puts it back. Dock, Finder and SystemUIServer are restarted only
+when something actually changed, so a run with no drift closes none of your
+Finder windows. `--force` rewrites every setting regardless of its current
+value.
 
 ### Layout
 
@@ -41,7 +44,7 @@ in it has changed since the last run. `--force` overrides that.
 |---|---|
 | `mac-setup.sh` | Orchestrator: flags, step ordering |
 | `Brewfile` | The package list — source of truth for what gets installed |
-| `scripts/lib.sh` | Shared logging, dry-run and change-stamp helpers |
+| `scripts/lib.sh` | Shared logging, dry-run and `defaults` comparison helpers |
 | `scripts/10-homebrew.sh` | Install Homebrew, put it on `PATH` |
 | `scripts/20-packages.sh` | Apply the `Brewfile` |
 | `scripts/25-python.sh` | Put Homebrew's CPython ahead of Apple's on `PATH` |

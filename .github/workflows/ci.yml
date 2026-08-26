@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets CI be re-run by hand from the Actions tab. Useful when a run needs
+  # repeating without a code change - including the case where GitHub simply
+  # never created one for a pushed head.
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -89,7 +93,7 @@ jobs:
 
   brewfile:
     name: Brewfile tokens resolve
-    # Needs a real Homebrew, so this is the one job that wants macOS.
+    # Needs a real Homebrew, so this job wants macOS.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -99,3 +103,52 @@ jobs:
       # long time (it is "gitup-app") because nothing checked.
       - name: Validate every cask and formula
         run: ./tools/validate-brewfile.sh
+
+  converge:
+    name: macOS defaults converge
+    # Deliberately run against the real `defaults`, not a stub: the whole
+    # question is whether a written value reads back identically, and only
+    # macOS can answer that. The runner is ephemeral, so writing to it is fine.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply, then assert a second run changes nothing
+        run: |
+          # Always show the first run's output. Without this, a failure in the
+          # very first command leaves no diagnostic at all - which is how a
+          # bash 3.2 incompatibility once showed up as a 40ms mystery.
+          if ! ./mac-setup.sh --only macos-defaults > first.log 2>&1; then
+            echo "--- first run failed ---" >&2
+            sed 's/\x1b\[[0-9;]*m//g' first.log >&2
+            exit 1
+          fi
+          sed 's/\x1b\[[0-9;]*m//g' first.log | tail -3
+
+          ./mac-setup.sh --only macos-defaults 2>&1 \
+            | sed 's/\x1b\[[0-9;]*m//g' | tee second.log
+
+          if ! grep -q 'already match' second.log; then
+            echo "a setting did not read back as written - the step never settles" >&2
+            exit 1
+          fi
+
+      # The point of comparing live values: drift gets corrected.
+      - name: Assert drift is detected and put back
+        run: |
+          defaults write com.apple.dock orientation -string bottom
+
+          ./mac-setup.sh --only macos-defaults 2>&1 \
+            | sed 's/\x1b\[[0-9;]*m//g' | tee third.log
+
+          if ! grep -q '1 setting(s) changed' third.log; then
+            echo "expected exactly one changed setting after drifting one" >&2
+            exit 1
+          fi
+
+          got="$(defaults read com.apple.dock orientation)"
+          if [ "$got" != "left" ]; then
+            echo "drifted setting was not restored (orientation=$got)" >&2
+            exit 1
+          fi
+          echo "drift detected and corrected"

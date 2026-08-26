@@ -1,137 +1,142 @@
 #!/bin/bash
 # macOS UI preferences.
 #
-# Applying these is cheap, but restarting Dock/Finder/SystemUIServer is not:
-# it closes your Finder windows. So this script fingerprints itself and skips
-# entirely when nothing in it has changed since the last successful run.
-# Use --force to re-apply anyway.
+# Every setting is compared against its live value and written only if it
+# differs. That means this converges rather than merely not-repeating: a
+# preference you changed in System Settings gets put back on the next run.
+#
+# Dock/Finder/SystemUIServer are restarted only when something actually
+# changed, so a run with no drift closes none of your Finder windows.
+#
+# --force rewrites everything regardless of current value.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-SELF="${BASH_SOURCE[0]}"
-
-if stamp_is_fresh "$SELF" "macos-defaults"; then
-    log_skip "macOS defaults unchanged since last run"
-    exit 0
+if ! have defaults; then
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] not macOS - would apply the defaults in this step\n'
+        exit 0
+    fi
+    log_error "the 'defaults' command is missing - this step only runs on macOS"
+    exit 1
 fi
 
-log_info "applying macOS defaults"
-
-if [ "${DRY_RUN:-0}" = "1" ]; then
-    printf '     [dry-run] would apply the defaults in %s and restart Dock/Finder/SystemUIServer\n' "$SELF"
-    exit 0
-fi
-
-# show Library folder
-chflags nohidden ~/Library
+# show Library folder (cheap, no restart needed, not counted as a change)
+chflags nohidden ~/Library 2>/dev/null || true
 
 # --- Finder ------------------------------------------------------------------
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
-defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
-defaults write com.apple.finder AppleShowAllFiles -bool true
-defaults write com.apple.finder QLEnableTextSelection -bool true
-defaults write com.apple.finder ShowRecentTags -bool false
-defaults write com.apple.finder PathBarRootAtHome -bool true
-defaults write com.apple.finder ShowStatusBar -bool true
-defaults write com.apple.finder ShowPathbar -bool true
-defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
-defaults write com.apple.finder OpenWindowForNewRemovableDisk -bool true
+dset com.apple.finder _FXSortFoldersFirst -bool true
+dset com.apple.finder _FXShowPosixPathInTitle -bool true
+dset com.apple.finder AppleShowAllFiles -bool true
+dset com.apple.finder QLEnableTextSelection -bool true
+dset com.apple.finder ShowRecentTags -bool false
+dset com.apple.finder PathBarRootAtHome -bool true
+dset com.apple.finder ShowStatusBar -bool true
+dset com.apple.finder ShowPathbar -bool true
+dset com.apple.finder FXEnableExtensionChangeWarning -bool false
+dset com.apple.finder OpenWindowForNewRemovableDisk -bool true
 
 # Use list view in all Finder windows by default.
 # Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
-defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+dset com.apple.finder FXPreferredViewStyle -string "Nlsv"
 
 # Set Home folder as the default location for new Finder windows.
 # For other paths, use `PfLo` and `file:///full/path/here/`
-defaults write com.apple.finder NewWindowTarget -string "PfDe"
-defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/"
+dset com.apple.finder NewWindowTarget -string "PfDe"
+dset com.apple.finder NewWindowTargetPath -string "file://${HOME}/"
 
 # --- global ------------------------------------------------------------------
 # NOTE: `-g` and `NSGlobalDomain` are the same domain.
-defaults write -g AppleShowAllExtensions -bool true
-defaults write -g NSDocumentSaveNewDocumentsToCloud -bool false
-defaults write -g NSNavPanelExpandedStateForSaveMode -bool true
-defaults write -g NSWindowSupportsAutomaticInlineTitle -bool false
+dset -g AppleShowAllExtensions -bool true
+dset -g NSDocumentSaveNewDocumentsToCloud -bool false
+dset -g NSNavPanelExpandedStateForSaveMode -bool true
+dset -g NSWindowSupportsAutomaticInlineTitle -bool false
 
 # Disable the text substitutions that get in the way when typing code
-defaults write -g NSAutomaticCapitalizationEnabled -bool false
-defaults write -g NSAutomaticDashSubstitutionEnabled -bool false
-defaults write -g NSAutomaticPeriodSubstitutionEnabled -bool false
-defaults write -g NSAutomaticQuoteSubstitutionEnabled -bool false
-defaults write -g NSAutomaticSpellingCorrectionEnabled -bool false
+dset -g NSAutomaticCapitalizationEnabled -bool false
+dset -g NSAutomaticDashSubstitutionEnabled -bool false
+dset -g NSAutomaticPeriodSubstitutionEnabled -bool false
+dset -g NSAutomaticQuoteSubstitutionEnabled -bool false
+dset -g NSAutomaticSpellingCorrectionEnabled -bool false
 
 # Disable press-and-hold for keys in favor of key repeat
-defaults write -g ApplePressAndHoldEnabled -bool false
+dset -g ApplePressAndHoldEnabled -bool false
 
 # Enable full keyboard access for all controls (e.g. Tab in modal dialogs)
-defaults write -g AppleKeyboardUIMode -int 3
+dset -g AppleKeyboardUIMode -int 3
 
 # Language and text formats
-defaults write -g AppleLanguages -array "en" "mk" "fr"
-defaults write -g AppleLocale -string "en_GB@currency=EUR"
-defaults write -g AppleMeasurementUnits -string "Centimeters"
-defaults write -g AppleMetricUnits -bool true
+darray -g AppleLanguages "en" "mk" "fr"
+dset -g AppleLocale -string "en_GB@currency=EUR"
+dset -g AppleMeasurementUnits -string "Centimeters"
+dset -g AppleMetricUnits -bool true
 
 # --- screenshots -------------------------------------------------------------
-defaults write com.apple.screencapture location "$HOME/Pictures/Screenshots"
-defaults write com.apple.screencapture type -string "png"
+dset com.apple.screencapture location -string "$HOME/Pictures/Screenshots"
+dset com.apple.screencapture type -string "png"
 
 # --- Dock --------------------------------------------------------------------
-defaults write com.apple.dock show-process-indicators -bool true
-defaults write com.apple.dock showhidden -bool true
-defaults write com.apple.dock expose-animation-duration -float 0.12
-defaults write com.apple.dock minimize-to-application -bool true
-defaults write com.apple.dock orientation -string left
-defaults write com.apple.dock show-recents -bool false
+dset com.apple.dock show-process-indicators -bool true
+dset com.apple.dock showhidden -bool true
+dset com.apple.dock expose-animation-duration -float 0.12
+dset com.apple.dock minimize-to-application -bool true
+dset com.apple.dock orientation -string left
+dset com.apple.dock show-recents -bool false
 
 # NOTE: -array-add APPENDS, so running this repeatedly stacks up duplicate
 # tiles. Only add the recents tile if it is not there yet.
 if ! defaults read com.apple.dock persistent-others 2>/dev/null | grep -q 'recents-tile'; then
-    defaults write com.apple.dock persistent-others -array-add \
-        '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] would add the recents tile to the Dock\n'
+    else
+        log_info "com.apple.dock persistent-others += recents-tile"
+        defaults write com.apple.dock persistent-others -array-add \
+            '{ "tile-data" = { "list-type" = 1; }; "tile-type" = "recents-tile"; }'
+    fi
+    DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
 fi
 
 # --- menu bar ----------------------------------------------------------------
-defaults write com.apple.menuextra.battery ShowPercent -bool true
+dset com.apple.menuextra.battery ShowPercent -bool true
 
 # --- network -----------------------------------------------------------------
 # Enable AirDrop over Ethernet
-defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
+dset com.apple.NetworkBrowser BrowseAllInterfaces -bool true
 
 # --- desktop services --------------------------------------------------------
 # Avoid creating .DS_Store files on network or USB volumes
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+dset com.apple.desktopservices DSDontWriteUSBStores -bool true
+dset com.apple.desktopservices DSDontWriteNetworkStores -bool true
 
 # Automatically open a new Finder window when a volume is mounted
-defaults write com.apple.frameworks.diskimages auto-open-ro-root -bool true
-defaults write com.apple.frameworks.diskimages auto-open-rw-root -bool true
+dset com.apple.frameworks.diskimages auto-open-ro-root -bool true
+dset com.apple.frameworks.diskimages auto-open-rw-root -bool true
 
 # --- input -------------------------------------------------------------------
 # Trackpad: tap to click
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
-defaults -currentHost write -g com.apple.mouse.tapBehavior -int 1
-defaults write -g com.apple.mouse.tapBehavior -int 1
+dset com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+dset --currentHost -g com.apple.mouse.tapBehavior -int 1
+dset -g com.apple.mouse.tapBehavior -int 1
 
 # Follow the keyboard focus while zoomed in
-defaults write com.apple.universalaccess closeViewZoomFollowsFocus -bool true
+dset com.apple.universalaccess closeViewZoomFollowsFocus -bool true
 
 # --- misc apps ---------------------------------------------------------------
-defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
-defaults write com.apple.mail AddressesIncludeNameOnPasteboard -bool false
-defaults write com.microsoft.Office SendPersonalInformationToMotherShip -bool false
+dset com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+dset com.apple.mail AddressesIncludeNameOnPasteboard -bool false
+dset com.microsoft.Office SendPersonalInformationToMotherShip -bool false
 
 # TextEdit: plain text, UTF-8
-defaults write com.apple.TextEdit RichText -int 0
-defaults write com.apple.TextEdit PlainTextEncoding -int 4
-defaults write com.apple.TextEdit PlainTextEncodingForWrite -int 4
+dset com.apple.TextEdit RichText -int 0
+dset com.apple.TextEdit PlainTextEncoding -int 4
+dset com.apple.TextEdit PlainTextEncodingForWrite -int 4
 
 # Activity Monitor
-defaults write com.apple.ActivityMonitor OpenMainWindow -bool true
-defaults write com.apple.ActivityMonitor IconType -int 5
-defaults write com.apple.ActivityMonitor ShowCategory -int 0
-defaults write com.apple.ActivityMonitor SortColumn -string "CPUUsage"
-defaults write com.apple.ActivityMonitor SortDirection -int 0
+dset com.apple.ActivityMonitor OpenMainWindow -bool true
+dset com.apple.ActivityMonitor IconType -int 5
+dset com.apple.ActivityMonitor ShowCategory -int 0
+dset com.apple.ActivityMonitor SortColumn -string "CPUUsage"
+dset com.apple.ActivityMonitor SortDirection -int 0
 
 # --- legacy / no longer effective --------------------------------------------
 # These were in the original playbook. I believe each is now a no-op on current
@@ -141,41 +146,50 @@ defaults write com.apple.ActivityMonitor SortDirection -int 0
 #   # Safari's preferences are TCC-protected since Mojave. `defaults write`
 #   # against com.apple.Safari silently does nothing unless the terminal has
 #   # Full Disk Access.
-#   defaults write com.apple.Safari UniversalSearchEnabled -bool false
-#   defaults write com.apple.Safari SuppressSearchSuggestions -bool true
-#   defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
+#   dset com.apple.Safari UniversalSearchEnabled -bool false
+#   dset com.apple.Safari SuppressSearchSuggestions -bool true
+#   dset com.apple.Safari SendDoNotTrackHTTPHeader -bool true
 #
 #   # Screen-saver password settings moved to a protected domain; setting them
 #   # via `defaults` no longer takes effect. Use System Settings > Lock Screen.
-#   defaults write com.apple.screensaver askForPassword -int 1
-#   defaults write com.apple.screensaver askForPasswordDelay -int 0
+#   dset com.apple.screensaver askForPassword -int 1
+#   dset com.apple.screensaver askForPasswordDelay -int 0
 #
 #   # Subpixel antialiasing was removed in Mojave; this key does nothing.
-#   defaults write -g AppleFontSmoothing -int 1
+#   dset -g AppleFontSmoothing -int 1
 #
 #   # The menu-bar battery item moved to Control Center in Big Sur; ShowTime is
 #   # no longer read. Use System Settings > Control Center > Battery.
-#   defaults write com.apple.menuextra.battery ShowTime -bool true
+#   dset com.apple.menuextra.battery ShowTime -bool true
 #
 #   # This key predates AAC/LDAC negotiation on modern macOS and no longer
 #   # affects Bluetooth audio quality.
-#   defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
+#   dset com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
 #
 #   # Dashboard was removed in Catalina.
-#   defaults write com.apple.dashboard devmode -bool true
+#   dset com.apple.dashboard devmode -bool true
 #
 #   # Secure Empty Trash was removed when APFS shipped.
-#   defaults write com.apple.finder EmptyTrashSecurely -bool true
+#   dset com.apple.finder EmptyTrashSecurely -bool true
 #
 #   # menuExtras has had no effect since Big Sur moved the menu bar to
 #   # Control Center.
-#   defaults write com.apple.systemuiserver menuExtras -array ...
+#   darray com.apple.systemuiserver menuExtras ...
 
-# --- restart affected apps ---------------------------------------------------
+# --- restart affected apps, only if something changed ------------------------
+if [ "$DEFAULTS_CHANGED" -eq 0 ]; then
+    log_skip "all macOS defaults already match - nothing restarted"
+    exit 0
+fi
+
+if [ "${DRY_RUN:-0}" = "1" ]; then
+    printf '     [dry-run] %s setting(s) differ; would restart Dock/Finder/SystemUIServer\n' \
+        "$DEFAULTS_CHANGED"
+    exit 0
+fi
+
+log_info "$DEFAULTS_CHANGED setting(s) changed, restarting Dock/Finder/SystemUIServer"
 # `|| true` because killall exits non-zero when the process is not running.
 for app in Dock Finder SystemUIServer; do
     killall "$app" >/dev/null 2>&1 || true
 done
-
-stamp_write "$SELF" "macos-defaults"
-log_info "macOS defaults applied"

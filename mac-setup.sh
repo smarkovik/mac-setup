@@ -9,7 +9,7 @@
 #   ./mac-setup.sh --dry-run            show what would happen, change nothing
 #   ./mac-setup.sh --list               list the steps
 #   ./mac-setup.sh --only macos-defaults [--only git ...]
-#   ./mac-setup.sh --force              re-apply steps that would be skipped
+#   ./mac-setup.sh --force              re-apply settings even where they match
 #
 # -E so the ERR trap below is inherited by functions and subshells.
 set -Eeuo pipefail
