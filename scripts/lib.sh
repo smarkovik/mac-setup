@@ -28,26 +28,85 @@ run() {
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# --- change stamps -----------------------------------------------------------
-# A step that is expensive or disruptive to repeat (restarting Finder, say) can
-# stamp its own source file. If the file has not changed since the last
-# successful run, the step can skip itself and report "unchanged" - which is the
-# signal that makes this safe to run on a loop.
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/mac-setup"
+# --- macOS defaults ----------------------------------------------------------
+# Compare each setting against its live value and write only what differs.
+#
+# This is what makes the defaults step converge rather than merely not-repeat:
+# a setting you changed in System Settings gets put back, and a run where
+# nothing drifted touches nothing - so the Dock/Finder restart can be skipped.
+#
+# DEFAULTS_CHANGED counts the writes actually performed. Callers restart the
+# affected apps only when it is non-zero.
+DEFAULTS_CHANGED=0
 
-stamp_current() { shasum -a 256 "$1" | awk '{print $1}'; }
-
-stamp_is_fresh() {
-    # $1 = file to fingerprint, $2 = stamp name
-    [ "${FORCE:-0}" = "1" ] && return 1
-    local stamp_file="$STATE_DIR/$2.stamp"
-    [ -f "$stamp_file" ] || return 1
-    [ "$(cat "$stamp_file")" = "$(stamp_current "$1")" ]
+# `defaults read` normalises what it returns, so the value written and the
+# value read back are not always the same string. Map write-value -> read-value.
+_dread_expect() {
+    local flag="$1" value="$2"
+    case "$flag" in
+        -bool)
+            case "$value" in
+                true|TRUE|yes|YES|1) printf '1' ;;
+                *)                   printf '0' ;;
+            esac
+            ;;
+        *) printf '%s' "$value" ;;
+    esac
 }
 
-stamp_write() {
-    # $1 = file to fingerprint, $2 = stamp name
-    [ "${DRY_RUN:-0}" = "1" ] && return 0
-    mkdir -p "$STATE_DIR"
-    stamp_current "$1" > "$STATE_DIR/$2.stamp"
+# dset [--currentHost] <domain> <key> <flag> <value>
+#   flag: -bool | -int | -float | -string
+dset() {
+    local host=()
+    if [ "$1" = "--currentHost" ]; then host=(-currentHost); shift; fi
+    local domain="$1" key="$2" flag="$3" value="$4"
+
+    local want have
+    want="$(_dread_expect "$flag" "$value")"
+    have="$(defaults "${host[@]}" read "$domain" "$key" 2>/dev/null || true)"
+
+    if [ "${FORCE:-0}" != "1" ]; then
+        if [ "$flag" = "-float" ] && [ -n "$have" ]; then
+            # Floats can read back with extra precision, so compare numerically.
+            if awk -v a="$have" -v b="$want" 'BEGIN { exit !(a + 0 == b + 0) }'; then
+                return 0
+            fi
+        elif [ "$have" = "$want" ]; then
+            return 0
+        fi
+    fi
+
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] would set %s %s = %s\n' "$domain" "$key" "$value"
+    else
+        log_info "$domain $key = $value"
+        defaults "${host[@]}" write "$domain" "$key" "$flag" "$value"
+    fi
+    DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+}
+
+# darray <domain> <key> <value>...
+# `defaults read` prints arrays as a multi-line plist, so flatten both sides
+# to a comma-joined string before comparing.
+darray() {
+    local domain="$1" key="$2"
+    shift 2
+
+    local want have
+    want="$(IFS=,; printf '%s' "$*")"
+    have="$(defaults read "$domain" "$key" 2>/dev/null | tr -d ' \n"' || true)"
+    have="${have#(}"
+    have="${have%)}"
+
+    if [ "${FORCE:-0}" != "1" ] && [ "$have" = "$want" ]; then
+        return 0
+    fi
+
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] would set %s %s = %s\n' "$domain" "$key" "$want"
+    else
+        log_info "$domain $key = $want"
+        defaults write "$domain" "$key" -array "$@"
+    fi
+    DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
 }
