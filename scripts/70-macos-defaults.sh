@@ -96,9 +96,6 @@ if ! defaults read com.apple.dock persistent-others 2>/dev/null | grep -q 'recen
     DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
 fi
 
-# --- menu bar ----------------------------------------------------------------
-dset com.apple.menuextra.battery ShowPercent -bool true
-
 # --- network -----------------------------------------------------------------
 # Enable AirDrop over Ethernet
 dset com.apple.NetworkBrowser BrowseAllInterfaces -bool true
@@ -158,9 +155,13 @@ dset com.apple.ActivityMonitor SortDirection -int 0
 #   # Subpixel antialiasing was removed in Mojave; this key does nothing.
 #   dset -g AppleFontSmoothing -int 1
 #
-#   # The menu-bar battery item moved to Control Center in Big Sur; ShowTime is
-#   # no longer read. Use System Settings > Control Center > Battery.
+#   # The whole com.apple.menuextra.battery domain died when the battery item
+#   # moved to Control Center in Big Sur. Neither key is read any more - set
+#   # this in System Settings > Control Center > Battery > Show Percentage.
+#   # (ShowPercent was left active here until an audit caught that it sits in
+#   # the same dead domain as ShowTime.)
 #   dset com.apple.menuextra.battery ShowTime -bool true
+#   dset com.apple.menuextra.battery ShowPercent -bool true
 #
 #   # This key predates AAC/LDAC negotiation on modern macOS and no longer
 #   # affects Bluetooth audio quality.

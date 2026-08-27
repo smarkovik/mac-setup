@@ -54,6 +54,8 @@ value.
 | `scripts/60-zsh.sh` | oh-my-zsh |
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
+| `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
+| `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
 
 ### Adding or removing packages
 
@@ -73,6 +75,23 @@ Before committing a new entry, check the token exists:
 `brew bundle` fails the **entire** file on one bad token, so a single typo
 takes every other package with it. CI runs this on a macOS runner for the same
 reason.
+
+### Checking a macOS setting is still real
+
+`defaults write` succeeds against a key nothing reads, so a setting can be dead
+for years without any error — `com.apple.menuextra.battery ShowPercent` sat in
+here long after the battery item moved to Control Center in Big Sur. Reading the
+value back cannot detect that; only watching what the system itself writes can.
+
+```sh
+./tools/audit-defaults.sh                    # watch the domains we touch
+./tools/audit-defaults.sh com.apple.dock     # or specific ones
+```
+
+It snapshots the domains, waits while you change one thing in System Settings,
+then diffs and names the key macOS actually writes today. Worth a pass after
+each major macOS release — there is no reliable published source for this, and
+the usual reference (macos-defaults.com) has no macOS 26 data at all.
 
 ### Python
 
