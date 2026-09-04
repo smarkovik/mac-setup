@@ -59,12 +59,14 @@ value.
 
 ### Adding or removing packages
 
-Edit the `Brewfile` and re-run. To see what is installed but no longer listed:
+Edit the `Brewfile` and re-run. Removing a line does **not** uninstall anything;
+do that yourself with `brew uninstall` / `brew uninstall --cask`.
 
-```sh
-brew bundle cleanup --file=Brewfile            # report
-brew bundle cleanup --file=Brewfile --force    # actually uninstall
-```
+> **Do not reach for `brew bundle cleanup`.** It lists everything installed that
+> is not in the `Brewfile` — which is not drift, it is the rest of your machine.
+> On a real install it proposed removing `gh`, `awscli`, `ansible`, `pipx` and
+> `ngrok`. The `Brewfile` is the subset this repo manages, never an inventory of
+> everything you have.
 
 Before committing a new entry, check the token exists:
 
