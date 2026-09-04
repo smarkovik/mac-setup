@@ -92,10 +92,15 @@ dset() {
         fi
     fi
 
+    # Label the -currentHost variant, otherwise a key set both per-host and
+    # globally logs as two identical lines and reads like a duplicate.
+    local label="$domain"
+    [ "$ch" = "1" ] && label="-currentHost $domain"
+
     if [ "${DRY_RUN:-0}" = "1" ]; then
-        printf '     [dry-run] would set %s %s = %s\n' "$domain" "$key" "$value"
+        printf '     [dry-run] would set %s %s = %s\n' "$label" "$key" "$value"
     else
-        log_info "$domain $key = $value"
+        log_info "$label $key = $value"
         _defaults "$ch" write "$domain" "$key" "$flag" "$value"
     fi
     DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))

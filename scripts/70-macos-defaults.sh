@@ -65,11 +65,16 @@ dset -g ApplePressAndHoldEnabled -bool false
 # Enable full keyboard access for all controls (e.g. Tab in modal dialogs)
 dset -g AppleKeyboardUIMode -int 3
 
-# Language and text formats
-darray -g AppleLanguages "en" "mk" "fr"
-dset -g AppleLocale -string "en_GB@currency=EUR"
-dset -g AppleMeasurementUnits -string "Centimeters"
-dset -g AppleMetricUnits -bool true
+# NOTE: language, region and measurement units are deliberately NOT set here.
+# They are whole-system formatting (dates, numbers, currency), they are the
+# kind of thing you pick once in System Settings, and convergence would fight
+# you over them on every run. The old playbook forced en/mk/fr with
+# en_GB@currency=EUR and Centimeters; that is now left to the machine.
+#
+#   darray -g AppleLanguages "en" "mk" "fr"
+#   dset -g AppleLocale -string "en_GB@currency=EUR"
+#   dset -g AppleMeasurementUnits -string "Centimeters"
+#   dset -g AppleMetricUnits -bool true
 
 # --- screenshots -------------------------------------------------------------
 dset com.apple.screencapture location -string "$HOME/Pictures/Screenshots"

@@ -14,8 +14,11 @@ cask "cursor"
 # covers both the GUI and running a local server for opencode to talk to.
 # For CLI/server only and no app, swap this for: brew "ollama"
 cask "ollama-app"
-# AI coding agent for the terminal.
-brew "opencode"
+# The OpenCode desktop app. NOTE: the token is "opencode-desktop"; a bare
+# "opencode" cask does not exist, which is why this was previously (and
+# wrongly) assumed to be terminal-only. The `opencode` CLI *formula* does
+# exist but is deliberately not installed - the app is what gets used.
+cask "opencode-desktop"
 # Block's Goose. NOTE: the cask token is "block-goose", not "goose" - the
 # latter does not exist.
 cask "block-goose"
@@ -32,6 +35,7 @@ cask "brave-browser"
 # --- apps --------------------------------------------------------------------
 cask "1password"
 cask "dropbox"
+cask "ngrok"
 cask "notion-calendar"
 cask "whatsapp"
 cask "viber"

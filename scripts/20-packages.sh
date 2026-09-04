@@ -24,12 +24,11 @@ else
     run brew bundle --file="$BREWFILE"
 fi
 
-# Report drift without acting on it: removing a line from the Brewfile should
-# be a deliberate uninstall, not a side effect of the next run.
-if ! brew bundle cleanup --file="$BREWFILE" 2>/dev/null | grep -q '^$'; then
-    extra=$(brew bundle cleanup --file="$BREWFILE" 2>/dev/null || true)
-    if [ -n "$extra" ]; then
-        log_warn "installed but not in the Brewfile (run 'brew bundle cleanup --force' to remove):"
-        printf '%s\n' "$extra"
-    fi
-fi
+# NOTE: deliberately no `brew bundle cleanup` drift report here.
+#
+# `cleanup` lists everything installed that is not in the Brewfile - which is
+# not "drift", it is simply the rest of your machine. On a real install it
+# proposed uninstalling gh, awscli, ansible, pipx, ngrok and their dependencies,
+# under a message telling you to run `--force`. The Brewfile is the subset this
+# repo manages, never an inventory of the whole system, so that comparison can
+# only ever produce dangerous advice.
