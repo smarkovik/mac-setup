@@ -1,6 +1,6 @@
 ---
 name: debugging
-description: Debug a failing test, crash, or unexpected behavior. Use when asked to fix a bug, investigate a failure, or figure out why something doesn't work.
+description: Debug a failing test, crash, exception, or behavior that doesn't match expectations. Use whenever the user pastes an error message or stack trace, says something is broken or acting up, or asks why an output is wrong - even without explicitly asking to "debug" or "fix" it. Always reproduce before proposing a fix.
 ---
 
 # Debugging
