@@ -1,21 +1,78 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen3-coder:small": {
+          "name": "Qwen3 Coder 30B (small, IQ4_XS)"
+        },
+        "qwen3-coder:mid": {
+          "name": "Qwen3 Coder 30B (mid, Q5_K_M)"
+        },
+        "qwen3-coder:big": {
+          "name": "Qwen3 Coder 30B (big, Q6_K)"
+        }
+      }
+    },
+    "llamacpp": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "llama-server (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8080/v1"
+      },
+      "models": {
+        "local": {
+          "name": "Whatever llama-server is currently serving"
+        }
+      }
+    }
+  },
 
-  "_comment_secrets": [
-    "NEVER put an API key in this file - it is committed to a public repo.",
-    "OpenCode substitutes {env:VAR} and {file:path} at load time, so reference",
-    "secrets instead of embedding them:",
-    "    \"apiKey\": \"{env:ANTHROPIC_API_KEY}\"",
-    "    \"apiKey\": \"{file:~/.secrets/openai-key}\"",
-    "Keys added via `opencode auth login` are stored separately in",
-    "~/.local/share/opencode/auth.json, which this repo never touches.",
-    "Underscore-prefixed keys like this one are comments; JSON has none."
-  ],
+  "agent": {
+    "architect": {
+      "mode": "primary",
+      "model": "ollama/qwen3-coder:big",
+      "prompt": "{file:./prompts/architect.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    },
+    "debugger": {
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder:mid",
+      "prompt": "{file:./prompts/debugger.txt}",
+      "permission": {
+        "edit": "ask",
+        "bash": "allow"
+      }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder:big",
+      "prompt": "{file:./prompts/reviewer.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  },
 
-  "_comment_usage": [
-    "This file is symlinked to ~/.config/opencode/opencode.json by",
-    "scripts/65-opencode.sh, so edits here take effect immediately and are",
-    "tracked in git. Full key reference: https://opencode.ai/docs/config/",
-    "Common additions: model, provider, agent, mcp, permission, formatter, lsp."
-  ]
+  "lsp": true,
+
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security", "ghcr.io/github/github-mcp-server"],
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "enabled": false
+    }
+  }
 }

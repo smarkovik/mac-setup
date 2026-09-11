@@ -54,7 +54,11 @@ value.
 | `scripts/60-zsh.sh` | oh-my-zsh |
 | `scripts/65-opencode.sh` | Link OpenCode's config into this repo |
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
+| `scripts/80-local-code.sh` | Link `local-code` into `~/bin` |
 | `config/opencode/opencode.json` | The OpenCode config itself — edit this |
+| `config/opencode/prompts/` | System prompts for the architect/debugger/reviewer agents |
+| `bin/local-code` | Control panel: pull/run/wipe the local coding models |
+| `.claude/skills/` | Architecture review, debugging and code review skills (OpenCode reads these too) |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -99,17 +103,130 @@ cp ~/.config/opencode/opencode.json.backup-* config/opencode/opencode.json
 ./mac-setup.sh --only opencode
 ```
 
-**API keys do not go in this file.** Keys added with `opencode auth login` are
-stored in `~/.local/share/opencode/auth.json` — a different directory that this
-repo never reads, writes or links. If you do need to reference a key from the
-config, OpenCode resolves `{env:VAR}` and `{file:path}` at load time:
+**It points at local model servers, not a cloud provider.** Both entries use
+`@ai-sdk/openai-compatible` against an OpenAI-shaped endpoint on localhost, so
+neither needs an API key:
+
+| Provider | `baseURL` | Served by |
+|---|---|---|
+| `ollama` | `http://localhost:11434/v1` | `ollama serve` |
+| `llamacpp` | `http://127.0.0.1:8080/v1` | `llama-server` |
+
+The model IDs in each `models` block are placeholders — replace them with what
+your servers actually expose (`ollama list`, or whatever you passed to
+`llama-server -m`). OpenCode sends the ID through verbatim; a name that does not
+exist on the server fails at request time, not at load time.
+
+There are no credentials here to protect. If you ever do add a cloud provider,
+put the key in `~/.local/share/opencode/auth.json` via `opencode auth login` —
+a directory this repo never reads, writes or links — or reference it rather than
+embedding it, since OpenCode resolves `{env:VAR}` and `{file:path}` at load time:
 
 ```json
 "apiKey": "{env:ANTHROPIC_API_KEY}"
 ```
 
-so the secret stays out of the committed file. Key reference:
+JSON has no comments, so the notes live here rather than in the file. Full key
+reference — `model`, `agent`, `mcp`, `permission`, `formatter`, `lsp` — is at
 [opencode.ai/docs/config](https://opencode.ai/docs/config/).
+
+#### `local-code` — the local model control panel
+
+Three quants of the same model (`unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF`
+on the Hugging Face Hub), pulled through `ollama` and renamed to a short tag
+so `ollama list` and OpenCode's model picker both show a size, not a
+checkpoint filename:
+
+| Tier | Quant | ~Size | Ollama tag |
+|---|---|---|---|
+| `small` | IQ4_XS | 16 GB | `qwen3-coder:small` |
+| `mid` | Q5_K_M | 22 GB | `qwen3-coder:mid` |
+| `big` | Q6_K | 25 GB | `qwen3-coder:big` |
+
+`local-code` (symlinked to `~/bin` by `scripts/75-local-code.sh`, same
+never-overwrite pattern as the OpenCode step) drives all three:
+
+```sh
+local-code list            # what's pulled, and disk free
+local-code pull mid        # or: small | big | all
+local-code run big         # pull if needed, start ollama, launch OpenCode
+local-code wipe small      # or: mid | big | all - frees the disk back up
+```
+
+`pull` and `wipe` are the point: at 25 GB for the largest tier, keeping all
+three on disk permanently is a real cost, so the workflow is to pull the
+tier you need, run it, and wipe it when you are done with it rather than
+let three quants sit there.
+
+Q8_0 is deliberately not offered as a tier: on 48 GB of unified memory it
+leaves almost no headroom for KV cache or anything else running, for a
+quality jump that is the flattest part of the curve on a sparse MoE model
+like this one. Pull it manually if you ever need to check that claim
+yourself: `ollama pull hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_0`.
+
+`ollama cp` copies only the manifest, not the weights, so renaming the long
+Hub reference to a short tag after pulling is free; `ollama rm` only deletes
+blobs no other manifest still references, so removing the long name right
+after is safe.
+
+#### Agents: architect, debugger, reviewer
+
+Three agents in `config/opencode/opencode.json`, each scoped to one job with
+its own model and permissions, prompts in `config/opencode/prompts/`:
+
+| Agent | Mode | Model | Edit | Bash |
+|---|---|---|---|---|
+| `architect` | primary | `qwen3-coder:big` | deny | ask |
+| `debugger` | subagent | `qwen3-coder:mid` | ask | allow |
+| `reviewer` | subagent | `qwen3-coder:big` | deny | deny |
+
+`architect` and `reviewer` cannot edit files - they read and reason, so a
+bad call costs nothing, and `big` (Q6) trades speed for reasoning quality
+since there's no tight loop to keep fast. `debugger` can run commands and
+edit, because reproducing a failure and fixing it needs both; it runs on
+`mid` (Q5) because that loop is interactive and speed matters more there
+than the last bit of quality.
+
+Invoke a subagent with `@debugger` or `@reviewer` in OpenCode, or switch to
+`architect` as your primary agent.
+
+#### LSP
+
+```json
+"lsp": true
+```
+
+Turns on every language server OpenCode ships built-in support for, each
+activating only when its own project already satisfies it (a `typescript`
+dependency, `pyright` installed, and so on) - this repo doesn't install any
+of them for you. Gives every agent real go-to-definition and references
+instead of grepping for text, which matters most for architecture and
+review: "what else calls this" is a structural question, not a text search.
+
+#### MCP: GitHub
+
+```json
+"mcp": {
+  "github": {
+    "type": "local",
+    "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security", "ghcr.io/github/github-mcp-server"],
+    "environment": { "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}" },
+    "enabled": false
+  }
+}
+```
+
+Lets the `reviewer` agent look at a real PR - diffs, check runs, existing
+review threads - instead of only a local diff. **Disabled by default**:
+it needs Docker (not installed by this repo - a real dependency, add
+`cask "docker"` yourself if you want it) and a GitHub PAT in
+`GITHUB_PERSONAL_ACCESS_TOKEN`. Flip `enabled` to `true` once both exist.
+
+Sentry MCP (`@sentry/mcp-server`) is a reasonable second addition if you use
+Sentry, for the same reason - direct issue/error lookup instead of pasting
+stack traces in by hand - but it authenticates via an OAuth flow per
+account, so it isn't pre-wired here; add it the same way once you've looked
+at [github.com/getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp).
 
 ### Checking a macOS setting is still real
 
