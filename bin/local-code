@@ -159,11 +159,21 @@ case "${1:-}" in
     list|status) cmd_list ;;
     pull)
         [ -n "${2:-}" ] || { err "usage: local-code pull small|mid|big|all"; exit 2; }
-        [ "$2" = "all" ] && for_each_tier cmd_pull || { tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }; cmd_pull "$2"; }
+        if [ "$2" = "all" ]; then
+            for_each_tier cmd_pull
+        else
+            tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
+            cmd_pull "$2"
+        fi
         ;;
     wipe)
         [ -n "${2:-}" ] || { err "usage: local-code wipe small|mid|big|all"; exit 2; }
-        [ "$2" = "all" ] && for_each_tier cmd_wipe || { tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }; cmd_wipe "$2"; }
+        if [ "$2" = "all" ]; then
+            for_each_tier cmd_wipe
+        else
+            tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
+            cmd_wipe "$2"
+        fi
         ;;
     run)
         [ -n "${2:-}" ] || { err "usage: local-code run small|mid|big"; exit 2; }
