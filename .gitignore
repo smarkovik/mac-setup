@@ -1,0 +1,9 @@
+# OpenCode keeps API keys here, NOT in opencode.json. It should never end up
+# in this repo, but if one is ever copied in by accident, do not commit it.
+auth.json
+**/auth.json
+
+# Backups made when a step moves an existing config aside.
+*.backup-*
+
+.DS_Store
