@@ -21,14 +21,14 @@ jobs:
 
       - name: Syntax check
         run: |
-          for f in mac-setup.sh scripts/*.sh tools/*.sh; do
+          for f in mac-setup.sh scripts/*.sh tools/*.sh bin/local-code; do
             bash -n "$f"
           done
 
       # SC2028 (echo does not expand escape sequences) is exactly the class of
       # bug that shipped here before this job existed.
       - name: shellcheck
-        run: shellcheck --severity=warning mac-setup.sh scripts/*.sh tools/*.sh
+        run: shellcheck --severity=warning mac-setup.sh scripts/*.sh tools/*.sh bin/local-code
 
   idempotency:
     name: second run is a no-op

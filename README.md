@@ -54,7 +54,9 @@ value.
 | `scripts/60-zsh.sh` | oh-my-zsh |
 | `scripts/65-opencode.sh` | Link OpenCode's config into this repo |
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
+| `scripts/80-local-code.sh` | Link `local-code` into `~/bin` |
 | `config/opencode/opencode.json` | The OpenCode config itself — edit this |
+| `bin/local-code` | Control panel: pull/run/wipe the local coding models |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -125,6 +127,45 @@ embedding it, since OpenCode resolves `{env:VAR}` and `{file:path}` at load time
 JSON has no comments, so the notes live here rather than in the file. Full key
 reference — `model`, `agent`, `mcp`, `permission`, `formatter`, `lsp` — is at
 [opencode.ai/docs/config](https://opencode.ai/docs/config/).
+
+#### `local-code` — the local model control panel
+
+Three quants of the same model (`unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF`
+on the Hugging Face Hub), pulled through `ollama` and renamed to a short tag
+so `ollama list` and OpenCode's model picker both show a size, not a
+checkpoint filename:
+
+| Tier | Quant | ~Size | Ollama tag |
+|---|---|---|---|
+| `small` | IQ4_XS | 16 GB | `qwen3-coder:small` |
+| `mid` | Q5_K_M | 22 GB | `qwen3-coder:mid` |
+| `big` | Q6_K | 25 GB | `qwen3-coder:big` |
+
+`local-code` (symlinked to `~/bin` by `scripts/75-local-code.sh`, same
+never-overwrite pattern as the OpenCode step) drives all three:
+
+```sh
+local-code list            # what's pulled, and disk free
+local-code pull mid        # or: small | big | all
+local-code run big         # pull if needed, start ollama, launch OpenCode
+local-code wipe small      # or: mid | big | all - frees the disk back up
+```
+
+`pull` and `wipe` are the point: at 25 GB for the largest tier, keeping all
+three on disk permanently is a real cost, so the workflow is to pull the
+tier you need, run it, and wipe it when you are done with it rather than
+let three quants sit there.
+
+Q8_0 is deliberately not offered as a tier: on 48 GB of unified memory it
+leaves almost no headroom for KV cache or anything else running, for a
+quality jump that is the flattest part of the curve on a sparse MoE model
+like this one. Pull it manually if you ever need to check that claim
+yourself: `ollama pull hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_0`.
+
+`ollama cp` copies only the manifest, not the weights, so renaming the long
+Hub reference to a short tag after pulling is free; `ollama rm` only deletes
+blobs no other manifest still references, so removing the long name right
+after is safe.
 
 ### Checking a macOS setting is still real
 

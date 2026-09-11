@@ -1,0 +1,175 @@
+#!/bin/bash
+# local-code - control panel for the local coding models used by OpenCode.
+#
+# Three tiers of Qwen3-Coder-30B-A3B, one Hub repo at different quants, kept
+# under a short ollama tag so `ollama list` and OpenCode's model picker both
+# show `qwen3-coder:small|mid|big` instead of the long hf.co checkpoint name:
+#
+#   small  IQ4_XS  ~16GB  fastest, lowest RAM headroom needed
+#   mid    Q5_K_M  ~22GB  balanced
+#   big    Q6_K    ~25GB  quality ceiling for a 48GB machine (see below)
+#
+# Q8 is deliberately not offered here: on a 48GB Mac it leaves almost no
+# headroom for KV cache or anything else running, for a quality jump that is
+# the flattest part of the curve on a sparse MoE like this one. Pull it by
+# hand if you ever want it: `ollama pull hf.co/$HF_REPO:Q8_0`.
+#
+# Usage:
+#   local-code list                 show the tiers, what's pulled, sizes
+#   local-code pull   small|mid|big|all
+#   local-code run    small|mid|big  pull if needed, start ollama, launch OpenCode
+#   local-code wipe   small|mid|big|all
+set -euo pipefail
+
+HF_REPO="unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
+
+tier_quant() {
+    case "$1" in
+        small) echo "IQ4_XS" ;;
+        mid)   echo "Q5_K_M" ;;
+        big)   echo "Q6_K" ;;
+        *)     return 1 ;;
+    esac
+}
+
+# Approximate .gguf size on the Hub, for the disk-space check before pulling.
+# Not authoritative - `ollama pull` reports the real number as it downloads.
+tier_size_gb() {
+    case "$1" in
+        small) echo 17 ;;
+        mid)   echo 22 ;;
+        big)   echo 26 ;;
+    esac
+}
+
+TAG="qwen3-coder"
+ALL_TIERS="small mid big"
+
+log()  { printf '  %s\n' "$1"; }
+warn() { printf '  \033[0;33m%s\033[0m\n' "$1" >&2; }
+err()  { printf '  \033[1;31m%s\033[0m\n' "$1" >&2; }
+
+need_ollama() {
+    if ! command -v ollama >/dev/null 2>&1; then
+        err "ollama not found on PATH - install the ollama-app cask or 'brew install ollama'"
+        exit 1
+    fi
+}
+
+local_name() { printf '%s:%s\n' "$TAG" "$1"; }
+hub_ref()    { printf 'hf.co/%s:%s\n' "$HF_REPO" "$(tier_quant "$1")"; }
+
+is_pulled() {
+    ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$(local_name "$1")"
+}
+
+free_gb() {
+    # macOS `df -g` prints whole gigabytes of free space on the volume `ollama`
+    # actually stores models on (~/.ollama by default).
+    #
+    # `|| true`: under `set -e`+pipefail a df failure (unusual filesystem,
+    # permissions) would otherwise kill the whole script here - the space
+    # check is a nice-to-have, never worth aborting a pull over.
+    df -g "$HOME" 2>/dev/null | awk 'NR==2 {print $4}' || true
+}
+
+cmd_list() {
+    need_ollama
+    printf '  %-6s %-8s %-6s %s\n' "TIER" "QUANT" "~SIZE" "STATUS"
+    for t in $ALL_TIERS; do
+        status="not pulled"
+        is_pulled "$t" && status="pulled"
+        printf '  %-6s %-8s %-4sGB %s\n' "$t" "$(tier_quant "$t")" "$(tier_size_gb "$t")" "$status"
+    done
+    free="$(free_gb)"
+    [ -n "$free" ] && printf '\n  %s GB free on %s\n' "$free" "$HOME"
+}
+
+cmd_pull() {
+    need_ollama
+    local tier="$1"
+    if is_pulled "$tier"; then
+        log "$(local_name "$tier") already pulled"
+        return 0
+    fi
+
+    need="$(tier_size_gb "$tier")"
+    free="$(free_gb)"
+    if [ -n "$free" ] && [ "$free" -lt "$need" ]; then
+        err "only ${free}GB free, this tier needs ~${need}GB - run 'local-code wipe' on one you don't need first"
+        exit 1
+    fi
+
+    local hub; hub="$(hub_ref "$tier")"
+    log "pulling $hub"
+    ollama pull "$hub"
+
+    log "renaming to $(local_name "$tier")"
+    # `ollama cp` copies only the manifest - it does not duplicate the weights
+    # on disk, so this rename is free.
+    ollama cp "$hub" "$(local_name "$tier")"
+    # Safe to remove: `ollama rm` only deletes blobs no other manifest (like
+    # the copy just made) still references.
+    ollama rm "$hub" >/dev/null
+}
+
+cmd_wipe() {
+    need_ollama
+    local tier="$1"
+    if ! is_pulled "$tier"; then
+        log "$(local_name "$tier") not pulled - nothing to wipe"
+        return 0
+    fi
+    log "removing $(local_name "$tier")"
+    ollama rm "$(local_name "$tier")"
+}
+
+cmd_run() {
+    need_ollama
+    local tier="$1"
+    is_pulled "$tier" || cmd_pull "$tier"
+
+    if ! pgrep -x ollama >/dev/null 2>&1; then
+        log "starting ollama serve"
+        ollama serve >/dev/null 2>&1 &
+        disown
+        sleep 1
+    fi
+
+    if [ -d "/Applications/OpenCode.app" ]; then
+        log "opening OpenCode"
+        open -a "OpenCode"
+    else
+        warn "OpenCode.app not found in /Applications - open it yourself"
+    fi
+
+    printf '\n  select provider "ollama", model "%s" in OpenCode\n' "$(local_name "$tier")"
+}
+
+for_each_tier() {
+    local action="$1"
+    for t in $ALL_TIERS; do "$action" "$t"; done
+}
+
+usage() {
+    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+}
+
+case "${1:-}" in
+    list|status) cmd_list ;;
+    pull)
+        [ -n "${2:-}" ] || { err "usage: local-code pull small|mid|big|all"; exit 2; }
+        [ "$2" = "all" ] && for_each_tier cmd_pull || { tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }; cmd_pull "$2"; }
+        ;;
+    wipe)
+        [ -n "${2:-}" ] || { err "usage: local-code wipe small|mid|big|all"; exit 2; }
+        [ "$2" = "all" ] && for_each_tier cmd_wipe || { tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }; cmd_wipe "$2"; }
+        ;;
+    run)
+        [ -n "${2:-}" ] || { err "usage: local-code run small|mid|big"; exit 2; }
+        tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
+        cmd_run "$2"
+        ;;
+    -h|--help|"") usage ;;
+    *) err "unknown command: $1"; usage; exit 2 ;;
+esac
