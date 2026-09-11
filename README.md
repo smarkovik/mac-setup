@@ -52,7 +52,9 @@ value.
 | `scripts/40-git.sh` | Global git config |
 | `scripts/50-ssh.sh` | SSH key for GitHub |
 | `scripts/60-zsh.sh` | oh-my-zsh |
+| `scripts/65-opencode.sh` | Link OpenCode's config into this repo |
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
+| `config/opencode/opencode.json` | The OpenCode config itself — edit this |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -77,6 +79,37 @@ Before committing a new entry, check the token exists:
 `brew bundle` fails the **entire** file on one bad token, so a single typo
 takes every other package with it. CI runs this on a macOS runner for the same
 reason.
+
+### OpenCode configuration
+
+`~/.config/opencode/opencode.json` is symlinked to `config/opencode/opencode.json`
+in this repo, so the config is version-controlled and edits take effect
+immediately — no copy step, nothing to re-sync.
+
+```sh
+./mac-setup.sh --only opencode
+```
+
+If you already have a config there, it is **moved aside** to
+`opencode.json.backup-<timestamp>`, never overwritten. To keep those settings,
+copy the backup over the repo's copy and re-run:
+
+```sh
+cp ~/.config/opencode/opencode.json.backup-* config/opencode/opencode.json
+./mac-setup.sh --only opencode
+```
+
+**API keys do not go in this file.** Keys added with `opencode auth login` are
+stored in `~/.local/share/opencode/auth.json` — a different directory that this
+repo never reads, writes or links. If you do need to reference a key from the
+config, OpenCode resolves `{env:VAR}` and `{file:path}` at load time:
+
+```json
+"apiKey": "{env:ANTHROPIC_API_KEY}"
+```
+
+so the secret stays out of the committed file. Key reference:
+[opencode.ai/docs/config](https://opencode.ai/docs/config/).
 
 ### Checking a macOS setting is still real
 

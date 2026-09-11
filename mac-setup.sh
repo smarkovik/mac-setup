@@ -19,7 +19,7 @@ source "$REPO_DIR/scripts/lib.sh"
 
 # Ordered. Name -> script. Anything not listed here (e.g. passwordless-sudo)
 # is opt-in via --only.
-STEP_NAMES=(homebrew packages python dirs git ssh zsh macos-defaults)
+STEP_NAMES=(homebrew packages python dirs git ssh zsh opencode macos-defaults)
 
 step_script() {
     case "$1" in
@@ -30,6 +30,7 @@ step_script() {
         git)               echo "40-git.sh" ;;
         ssh)               echo "50-ssh.sh" ;;
         zsh)               echo "60-zsh.sh" ;;
+        opencode)          echo "65-opencode.sh" ;;
         macos-defaults)    echo "70-macos-defaults.sh" ;;
         passwordless-sudo) echo "90-passwordless-sudo.sh" ;;
         *)                 return 1 ;;

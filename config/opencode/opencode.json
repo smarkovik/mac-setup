@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "_comment_secrets": [
+    "NEVER put an API key in this file - it is committed to a public repo.",
+    "OpenCode substitutes {env:VAR} and {file:path} at load time, so reference",
+    "secrets instead of embedding them:",
+    "    \"apiKey\": \"{env:ANTHROPIC_API_KEY}\"",
+    "    \"apiKey\": \"{file:~/.secrets/openai-key}\"",
+    "Keys added via `opencode auth login` are stored separately in",
+    "~/.local/share/opencode/auth.json, which this repo never touches.",
+    "Underscore-prefixed keys like this one are comments; JSON has none."
+  ],
+
+  "_comment_usage": [
+    "This file is symlinked to ~/.config/opencode/opencode.json by",
+    "scripts/65-opencode.sh, so edits here take effect immediately and are",
+    "tracked in git. Full key reference: https://opencode.ai/docs/config/",
+    "Common additions: model, provider, agent, mcp, permission, formatter, lsp."
+  ]
+}
