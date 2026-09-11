@@ -99,16 +99,31 @@ cp ~/.config/opencode/opencode.json.backup-* config/opencode/opencode.json
 ./mac-setup.sh --only opencode
 ```
 
-**API keys do not go in this file.** Keys added with `opencode auth login` are
-stored in `~/.local/share/opencode/auth.json` — a different directory that this
-repo never reads, writes or links. If you do need to reference a key from the
-config, OpenCode resolves `{env:VAR}` and `{file:path}` at load time:
+**It points at local model servers, not a cloud provider.** Both entries use
+`@ai-sdk/openai-compatible` against an OpenAI-shaped endpoint on localhost, so
+neither needs an API key:
+
+| Provider | `baseURL` | Served by |
+|---|---|---|
+| `ollama` | `http://localhost:11434/v1` | `ollama serve` |
+| `llamacpp` | `http://127.0.0.1:8080/v1` | `llama-server` |
+
+The model IDs in each `models` block are placeholders — replace them with what
+your servers actually expose (`ollama list`, or whatever you passed to
+`llama-server -m`). OpenCode sends the ID through verbatim; a name that does not
+exist on the server fails at request time, not at load time.
+
+There are no credentials here to protect. If you ever do add a cloud provider,
+put the key in `~/.local/share/opencode/auth.json` via `opencode auth login` —
+a directory this repo never reads, writes or links — or reference it rather than
+embedding it, since OpenCode resolves `{env:VAR}` and `{file:path}` at load time:
 
 ```json
 "apiKey": "{env:ANTHROPIC_API_KEY}"
 ```
 
-so the secret stays out of the committed file. Key reference:
+JSON has no comments, so the notes live here rather than in the file. Full key
+reference — `model`, `agent`, `mcp`, `permission`, `formatter`, `lsp` — is at
 [opencode.ai/docs/config](https://opencode.ai/docs/config/).
 
 ### Checking a macOS setting is still real

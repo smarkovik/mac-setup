@@ -4,11 +4,11 @@
 # Symlinks ~/.config/opencode/opencode.json to the copy in this repo, so the
 # config is version-controlled and edits take effect immediately.
 #
-# SECRETS: this only ever touches the config file. API keys added with
-# `opencode auth login` live in ~/.local/share/opencode/auth.json, which is a
-# different directory and is never read, written or linked here. The config
-# itself is safe to commit because OpenCode resolves {env:VAR} and {file:path}
-# at load time, so keys are referenced rather than embedded.
+# The config points OpenCode at the local model servers (ollama, llama-server),
+# which need no credentials. This step only ever touches the config file:
+# anything `opencode auth login` stores lives in
+# ~/.local/share/opencode/auth.json, a different directory that is never read,
+# written or linked here.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
