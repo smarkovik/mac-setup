@@ -56,7 +56,9 @@ value.
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
 | `scripts/80-local-code.sh` | Link `local-code` into `~/bin` |
 | `config/opencode/opencode.json` | The OpenCode config itself — edit this |
+| `config/opencode/prompts/` | System prompts for the architect/debugger/reviewer agents |
 | `bin/local-code` | Control panel: pull/run/wipe the local coding models |
+| `.claude/skills/` | Architecture review, debugging and code review skills (OpenCode reads these too) |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -166,6 +168,65 @@ yourself: `ollama pull hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_0`.
 Hub reference to a short tag after pulling is free; `ollama rm` only deletes
 blobs no other manifest still references, so removing the long name right
 after is safe.
+
+#### Agents: architect, debugger, reviewer
+
+Three agents in `config/opencode/opencode.json`, each scoped to one job with
+its own model and permissions, prompts in `config/opencode/prompts/`:
+
+| Agent | Mode | Model | Edit | Bash |
+|---|---|---|---|---|
+| `architect` | primary | `qwen3-coder:big` | deny | ask |
+| `debugger` | subagent | `qwen3-coder:mid` | ask | allow |
+| `reviewer` | subagent | `qwen3-coder:big` | deny | deny |
+
+`architect` and `reviewer` cannot edit files - they read and reason, so a
+bad call costs nothing, and `big` (Q6) trades speed for reasoning quality
+since there's no tight loop to keep fast. `debugger` can run commands and
+edit, because reproducing a failure and fixing it needs both; it runs on
+`mid` (Q5) because that loop is interactive and speed matters more there
+than the last bit of quality.
+
+Invoke a subagent with `@debugger` or `@reviewer` in OpenCode, or switch to
+`architect` as your primary agent.
+
+#### LSP
+
+```json
+"lsp": true
+```
+
+Turns on every language server OpenCode ships built-in support for, each
+activating only when its own project already satisfies it (a `typescript`
+dependency, `pyright` installed, and so on) - this repo doesn't install any
+of them for you. Gives every agent real go-to-definition and references
+instead of grepping for text, which matters most for architecture and
+review: "what else calls this" is a structural question, not a text search.
+
+#### MCP: GitHub
+
+```json
+"mcp": {
+  "github": {
+    "type": "local",
+    "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security", "ghcr.io/github/github-mcp-server"],
+    "environment": { "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}" },
+    "enabled": false
+  }
+}
+```
+
+Lets the `reviewer` agent look at a real PR - diffs, check runs, existing
+review threads - instead of only a local diff. **Disabled by default**:
+it needs Docker (not installed by this repo - a real dependency, add
+`cask "docker"` yourself if you want it) and a GitHub PAT in
+`GITHUB_PERSONAL_ACCESS_TOKEN`. Flip `enabled` to `true` once both exist.
+
+Sentry MCP (`@sentry/mcp-server`) is a reasonable second addition if you use
+Sentry, for the same reason - direct issue/error lookup instead of pasting
+stack traces in by hand - but it authenticates via an OAuth flow per
+account, so it isn't pre-wired here; add it the same way once you've looked
+at [github.com/getsentry/sentry-mcp](https://github.com/getsentry/sentry-mcp).
 
 ### Checking a macOS setting is still real
 

@@ -31,5 +31,48 @@
         }
       }
     }
+  },
+
+  "agent": {
+    "architect": {
+      "mode": "primary",
+      "model": "ollama/qwen3-coder:big",
+      "prompt": "{file:./prompts/architect.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    },
+    "debugger": {
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder:mid",
+      "prompt": "{file:./prompts/debugger.txt}",
+      "permission": {
+        "edit": "ask",
+        "bash": "allow"
+      }
+    },
+    "reviewer": {
+      "mode": "subagent",
+      "model": "ollama/qwen3-coder:big",
+      "prompt": "{file:./prompts/reviewer.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    }
+  },
+
+  "lsp": true,
+
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security", "ghcr.io/github/github-mcp-server"],
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "enabled": false
+    }
   }
 }
