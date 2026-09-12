@@ -1,6 +1,6 @@
 ---
-name: code-review
-description: Review a diff, PR, or set of changes for correctness bugs, security issues, and unjustified complexity. Use when asked to review code, check a PR, or look over a change before it merges.
+name: review-checklist
+description: Review a diff, PR, or set of code changes for correctness bugs, security issues, and unjustified complexity before it merges. Use whenever asked to review code, look at a PR, check whether a change is safe to merge, or asked "does this look right" about a diff - even without the word "review".
 ---
 
 # Code review

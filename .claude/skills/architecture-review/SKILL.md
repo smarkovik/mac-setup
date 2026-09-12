@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: Review a design or codebase for architecture issues - coupling, data ownership, failure modes at scale. Use when asked to review architecture, evaluate a design, or assess whether a structural change is sound.
+description: Review a design, proposed change, or existing codebase for architecture issues - coupling, data ownership, and failure modes at scale. Use whenever asked to review an architecture, evaluate a design or RFC, weigh a structural refactor, or answer "will this scale" / "is this the right way to structure this" - even without the word "architecture", e.g. asking whether two services should share a database, whether a new abstraction is worth adding, or what breaks under load.
 ---
 
 # Architecture review
