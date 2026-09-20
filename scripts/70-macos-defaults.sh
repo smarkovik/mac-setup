@@ -183,19 +183,36 @@ dset com.apple.ActivityMonitor SortDirection -int 0
 #   darray com.apple.systemuiserver menuExtras ...
 
 # --- restart affected apps, only if something changed ------------------------
-if [ "$DEFAULTS_CHANGED" -eq 0 ]; then
+# Checked against both counters: DEFAULTS_CHANGED alone would print "already
+# match" even when every write failed and none actually matched.
+if [ "$DEFAULTS_CHANGED" -eq 0 ] && [ "$DEFAULTS_FAILED" -eq 0 ]; then
     log_skip "all macOS defaults already match - nothing restarted"
     exit 0
 fi
 
-if [ "${DRY_RUN:-0}" = "1" ]; then
-    printf '     [dry-run] %s setting(s) differ; would restart Dock/Finder/SystemUIServer\n' \
-        "$DEFAULTS_CHANGED"
-    exit 0
+if [ "$DEFAULTS_CHANGED" -gt 0 ]; then
+    if [ "${DRY_RUN:-0}" = "1" ]; then
+        printf '     [dry-run] %s setting(s) differ; would restart Dock/Finder/SystemUIServer\n' \
+            "$DEFAULTS_CHANGED"
+    else
+        log_info "$DEFAULTS_CHANGED setting(s) changed, restarting Dock/Finder/SystemUIServer"
+        # `|| true` because killall exits non-zero when the process is not running.
+        for app in Dock Finder SystemUIServer; do
+            killall "$app" >/dev/null 2>&1 || true
+        done
+    fi
 fi
 
-log_info "$DEFAULTS_CHANGED setting(s) changed, restarting Dock/Finder/SystemUIServer"
-# `|| true` because killall exits non-zero when the process is not running.
-for app in Dock Finder SystemUIServer; do
-    killall "$app" >/dev/null 2>&1 || true
-done
+# Every write that could succeed did - dset()/darray() already applied the
+# rest of the file even though this one domain was blocked. Only the one
+# thing that needs a human is left unresolved, and it's still reported.
+#
+# NOTE: this must stay the last thing in the file, and must exit explicitly
+# either way - falling off the end would exit with the `[` test's own status
+# (1 when false), reporting a false failure on every clean run.
+if [ "$DEFAULTS_FAILED" -gt 0 ]; then
+    log_error "$DEFAULTS_FAILED setting(s) could not be written - see warnings above"
+    exit 1
+fi
+
+exit 0
