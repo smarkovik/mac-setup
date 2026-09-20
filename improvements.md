@@ -32,7 +32,11 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   that's a silent, painful truncation and a regression from the old setup.
 - **Options:** (a) set `num_ctx` in `local-code` via a Modelfile at create time;
   (b) set context in the opencode provider `options`; (c) accept 4k.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** route (b) — set context in the opencode provider
+  `options`. **Caveat to verify at build time:** ollama's context is usually a
+  server-side model param (`num_ctx`), not a client option over the OpenAI-
+  compatible `/v1` API; if the provider option isn't honored, fall back to a
+  Modelfile `num_ctx` in `local-code` (route a).
 
 ### F2 — No top-level default model
 - **Severity:** medium · **Status:** open · **Basis:** verified
@@ -40,7 +44,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   none, so everyday use needs a manual pick or errors out.
 - **Options:** (a) add top-level `"model": "ollama/qwen3-coder:big"`;
   (b) pick a lighter default (`:mid`); (c) leave it, always use named agents.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** route (a) — add top-level
+  `"model": "ollama/qwen3-coder:big"`.
 
 ### F3 — Stage 0: no models pulled, setup inert
 - **Severity:** state (not a defect) · **Status:** open · **Basis:** verified
@@ -76,7 +81,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
 - **Options:** (a) keep it global (intended); (b) move to a project-level
   AGENTS.md so it only applies where wanted; (c) split — thin global + fuller
   per-project.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** route (a) — keep AGENTS.md global; the ponytail ethos
+  is the intended default everywhere. No change needed.
 
 ### F7 — Relative-path + symlink-dir resolution is fragile
 - **Severity:** low · **Status:** open · **Basis:** verified (broke once already)
@@ -93,7 +99,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   on hard reasoning / large context. Nothing is configured as a fallback.
 - **Options:** (a) add one cloud provider (key via `auth.json`, never committed)
   as an opt-in "when local isn't enough"; (b) stay strictly local by principle.
-- **Decision:** _pending Q&A_
+- **Decision (wontfix):** route (b) — stay strictly local by principle. Accept
+  the capability ceiling; no cloud provider configured.
 
 ### F9 — Model version drift
 - **Severity:** low · **Status:** open · **Basis:** verified
