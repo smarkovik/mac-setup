@@ -35,7 +35,6 @@ cask "brave-browser"
 # --- apps --------------------------------------------------------------------
 cask "1password"
 cask "dropbox"
-cask "ngrok"
 cask "notion-calendar"
 cask "whatsapp"
 cask "viber"
@@ -45,6 +44,10 @@ cask "slack"
 cask "gitup-app"
 
 # --- cli ---------------------------------------------------------------------
+# Cloudflare Tunnel, replacing ngrok for exposing a local port to the internet.
+# One-time setup is per-account and not scripted here: `cloudflared tunnel login`,
+# then create/route a tunnel. Docs: https://developers.cloudflare.com/tunnel/
+brew "cloudflared"
 brew "mc"
 brew "git-lfs"
 brew "ffmpeg"
