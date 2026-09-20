@@ -3,7 +3,8 @@
 # mac-setup - provision this Mac, repeatably.
 #
 # Every step is idempotent: run it as often as you like. Steps that have
-# nothing to do say so and exit.
+# nothing to do say so and exit. A step that fails does not stop the rest -
+# it's reported at the end so the run keeps maintaining everything else.
 #
 #   ./mac-setup.sh                      run every default step
 #   ./mac-setup.sh --dry-run            show what would happen, change nothing
@@ -77,32 +78,70 @@ fi
 
 [ "$DRY_RUN" = "1" ] && log_warn "dry run - nothing will be changed"
 
-# Report which step died rather than just exiting silently under `set -e`.
-# Steps are independently re-runnable, so the useful thing to tell you is how
-# to resume from the one that broke.
-CURRENT_STEP=""
+# A failing step must not stop the ones after it. This is meant to be run
+# unattended, repeatedly, as the thing that keeps a machine maintained over
+# time - one broken cask or a settings domain that needs an interactive
+# prompt should not block dirs/git/ssh/zsh/opencode from doing their job.
+# Steps are independently re-runnable, so each failure is collected and
+# reported at the end rather than raised immediately.
+#
+# The `if bash "$script"; then ... else` form matters, and matters in this
+# exact shape: a command tested by `if` does not trigger `set -e`, so one
+# step failing here does not raise like an untested command would. Using
+# `if ! bash "$script"; then` instead would be wrong in a different way -
+# `!` negates $?, so the "then" branch would see exit 0/1 from the negation,
+# not the step's real exit code.
+FAILED_STEPS=()
+
+# Kept only for genuinely unexpected failures in this orchestrator itself
+# (not step scripts, which are handled explicitly below and never reach it).
 on_failure() {
     local rc=$?
-    if [ -n "$CURRENT_STEP" ]; then
-        printf '\n'
-        log_error "step '$CURRENT_STEP' failed (exit $rc)"
-        log_error "once it is fixed, re-run just that step:"
-        log_error "    ./mac-setup.sh --only $CURRENT_STEP"
-    fi
+    log_error "mac-setup.sh failed unexpectedly (exit $rc)"
     exit "$rc"
 }
 trap on_failure ERR
 
+# So a long silent stretch (a slow cask download, a source build) reads as
+# "step 3/10, running" rather than an unlabeled wall of scrolling output.
+TOTAL_STEPS="${#STEPS[@]}"
+STEP_NUM=0
+RUN_START_EPOCH=$(date +%s)
+
 for name in "${STEPS[@]}"; do
+    STEP_NUM=$((STEP_NUM + 1))
     script="$REPO_DIR/scripts/$(step_script "$name")"
     if [ ! -f "$script" ]; then
         log_error "missing step script: $script"
-        exit 1
+        FAILED_STEPS+=("$name")
+        continue
     fi
-    CURRENT_STEP="$name"
-    log_step "$name"
-    bash "$script"
+    log_step "[$STEP_NUM/$TOTAL_STEPS] $name"
+    # SECONDS is a bash builtin counting up from the last assignment - no
+    # `date` subprocess needed, and it works the same on bash 3.2.
+    SECONDS=0
+    if bash "$script"; then
+        log_info "$name done (${SECONDS}s)"
+    else
+        rc=$?
+        FAILED_STEPS+=("$name")
+        printf '\n'
+        log_error "step '$name' failed after ${SECONDS}s (exit $rc) - continuing with the remaining steps"
+        log_error "once it is fixed, re-run just that step:"
+        log_error "    ./mac-setup.sh --only $name"
+        printf '\n'
+    fi
 done
 
-CURRENT_STEP=""
-log_info "done"
+TOTAL_ELAPSED=$(( $(date +%s) - RUN_START_EPOCH ))
+
+if [ "${#FAILED_STEPS[@]}" -gt 0 ]; then
+    printf '\n'
+    log_error "finished in ${TOTAL_ELAPSED}s with ${#FAILED_STEPS[@]} step(s) needing attention:"
+    for name in "${FAILED_STEPS[@]}"; do
+        log_error "  - $name (re-run: ./mac-setup.sh --only $name)"
+    done
+    exit 1
+fi
+
+log_info "done (${TOTAL_ELAPSED}s)"
