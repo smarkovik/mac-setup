@@ -39,6 +39,12 @@ have() { command -v "$1" >/dev/null 2>&1; }
 # affected apps only when it is non-zero.
 DEFAULTS_CHANGED=0
 
+# DEFAULTS_FAILED counts writes that failed - almost always a TCC-protected
+# domain (Accessibility, Full Disk Access) refusing the calling process.
+# dset() absorbs the failure and keeps going rather than letting `set -e`
+# abort every setting after it in the same step.
+DEFAULTS_FAILED=0
+
 # `defaults read` normalises what it returns, so the value written and the
 # value read back are not always the same string. Map write-value -> read-value.
 _dread_expect() {
@@ -99,11 +105,22 @@ dset() {
 
     if [ "${DRY_RUN:-0}" = "1" ]; then
         printf '     [dry-run] would set %s %s = %s\n' "$label" "$key" "$value"
-    else
-        log_info "$label $key = $value"
-        _defaults "$ch" write "$domain" "$key" "$flag" "$value"
+        DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+        return 0
     fi
-    DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+
+    log_info "$label $key = $value"
+    # Deliberately not `_defaults ... write ...` as a bare statement: a
+    # TCC-protected domain (com.apple.universalaccess and friends) makes
+    # `defaults write` exit non-zero, and under `set -e` that would abort
+    # every dset() call after it in the same step - not just this one.
+    if _defaults "$ch" write "$domain" "$key" "$flag" "$value"; then
+        DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+    else
+        DEFAULTS_FAILED=$((DEFAULTS_FAILED + 1))
+        log_warn "could not write $label $key - likely needs Accessibility (or Full Disk Access) permission"
+        log_warn "System Settings > Privacy & Security > Accessibility > add Terminal (or whatever runs this script), then re-run"
+    fi
 }
 
 # darray <domain> <key> <value>...
@@ -125,9 +142,16 @@ darray() {
 
     if [ "${DRY_RUN:-0}" = "1" ]; then
         printf '     [dry-run] would set %s %s = %s\n' "$domain" "$key" "$want"
-    else
-        log_info "$domain $key = $want"
-        defaults write "$domain" "$key" -array "$@"
+        DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+        return 0
     fi
-    DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+
+    log_info "$domain $key = $want"
+    if defaults write "$domain" "$key" -array "$@"; then
+        DEFAULTS_CHANGED=$((DEFAULTS_CHANGED + 1))
+    else
+        DEFAULTS_FAILED=$((DEFAULTS_FAILED + 1))
+        log_warn "could not write $domain $key - likely needs Accessibility (or Full Disk Access) permission"
+        log_warn "System Settings > Privacy & Security > Accessibility > add Terminal (or whatever runs this script), then re-run"
+    fi
 }
