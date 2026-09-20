@@ -122,7 +122,6 @@ dset -g com.apple.mouse.tapBehavior -int 1
 
 # --- misc apps ---------------------------------------------------------------
 dset com.apple.print.PrintingPrefs "Quit When Finished" -bool true
-dset com.apple.mail AddressesIncludeNameOnPasteboard -bool false
 dset com.microsoft.Office SendPersonalInformationToMotherShip -bool false
 
 # TextEdit: plain text, UTF-8
@@ -156,6 +155,13 @@ dset com.apple.ActivityMonitor SortDirection -int 0
 #   # everyone grant a broad permission for one toggle, set it by hand in
 #   # System Settings > Accessibility > Zoom > "Follow keyboard focus".
 #   dset com.apple.universalaccess closeViewZoomFollowsFocus -bool true
+#
+#   # com.apple.mail is sandboxed - its prefs live in a TCC-protected container
+#   # (~/Library/Containers/com.apple.mail/...) with a com.apple.macl gate, so
+#   # cfprefsd rejects the write ("Could not write domain ...; exiting") unless
+#   # the terminal running this has Full Disk Access. No GUI toggle for this
+#   # key; grant FDA and re-enable if you want it scripted.
+#   dset com.apple.mail AddressesIncludeNameOnPasteboard -bool false
 #
 #   # Screen-saver password settings moved to a protected domain; setting them
 #   # via `defaults` no longer takes effect. Use System Settings > Lock Screen.
