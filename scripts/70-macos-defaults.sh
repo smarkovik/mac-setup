@@ -120,9 +120,6 @@ dset com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
 dset --currentHost -g com.apple.mouse.tapBehavior -int 1
 dset -g com.apple.mouse.tapBehavior -int 1
 
-# Follow the keyboard focus while zoomed in
-dset com.apple.universalaccess closeViewZoomFollowsFocus -bool true
-
 # --- misc apps ---------------------------------------------------------------
 dset com.apple.print.PrintingPrefs "Quit When Finished" -bool true
 dset com.apple.mail AddressesIncludeNameOnPasteboard -bool false
@@ -151,6 +148,14 @@ dset com.apple.ActivityMonitor SortDirection -int 0
 #   dset com.apple.Safari UniversalSearchEnabled -bool false
 #   dset com.apple.Safari SuppressSearchSuggestions -bool true
 #   dset com.apple.Safari SendDoNotTrackHTTPHeader -bool true
+#
+#   # com.apple.universalaccess is TCC-protected (its plist carries a
+#   # com.apple.macl gate). cfprefsd silently rejects the write - "Could not
+#   # write domain com.apple.universalaccess; exiting" - unless the terminal
+#   # running this has Full Disk Access (or Accessibility). Rather than make
+#   # everyone grant a broad permission for one toggle, set it by hand in
+#   # System Settings > Accessibility > Zoom > "Follow keyboard focus".
+#   dset com.apple.universalaccess closeViewZoomFollowsFocus -bool true
 #
 #   # Screen-saver password settings moved to a protected domain; setting them
 #   # via `defaults` no longer takes effect. Use System Settings > Lock Screen.
