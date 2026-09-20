@@ -23,7 +23,17 @@
 #   local-code pull   small|mid|big|all
 #   local-code run    small|mid|big  pull if needed, start ollama, launch OpenCode
 #   local-code wipe   small|mid|big|all
+#   local-code sync                 rebuild opencode.json to match what's installed
 set -euo pipefail
+
+# Resolve our own repo bin dir (even when invoked via the ~/bin symlink) so we
+# can call the sibling opencode-config generator after changing what's installed.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+    link="$(readlink "$SELF")"
+    case "$link" in /*) SELF="$link" ;; *) SELF="$(dirname "$SELF")/$link" ;; esac
+done
+BINDIR="$(cd "$(dirname "$SELF")" && pwd)"
 
 HF_REPO="unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
 MODEL="Qwen3-Coder-30B-A3B-Instruct"   # GGUF filename prefix inside that repo
@@ -170,6 +180,11 @@ for_each_tier() {
     for t in $ALL_TIERS; do "$action" "$t"; done
 }
 
+# Regenerate opencode.json so its ollama model list matches what's installed.
+sync_config() {
+    [ -x "$BINDIR/opencode-config" ] && "$BINDIR/opencode-config" || true
+}
+
 usage() {
     awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
 }
@@ -184,6 +199,7 @@ case "${1:-}" in
             tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
             cmd_pull "$2"
         fi
+        sync_config
         ;;
     wipe)
         [ -n "${2:-}" ] || { err "usage: local-code wipe small|mid|big|all"; exit 2; }
@@ -193,7 +209,9 @@ case "${1:-}" in
             tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
             cmd_wipe "$2"
         fi
+        sync_config
         ;;
+    sync) sync_config ;;
     run)
         [ -n "${2:-}" ] || { err "usage: local-code run small|mid|big"; exit 2; }
         tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }

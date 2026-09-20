@@ -1,0 +1,54 @@
+#!/bin/bash
+# Generate config/opencode/opencode.json from opencode.json.tmpl, keeping only
+# the ollama models actually installed (per `ollama list`), so OpenCode's model
+# picker shows exactly what is downloaded - 3 pulled => 3 shown, none => none.
+# OpenCode does not auto-discover ollama models, so the list has to be baked in.
+#
+# The template is the committed source of truth (all tiers, with names/limits);
+# the generated opencode.json is gitignored and symlinked into ~/.config/opencode.
+# Called by scripts/65-opencode.sh (setup) and bin/local-code (after pull/wipe).
+set -euo pipefail
+
+# Resolve this script's real location even when invoked via a symlink, so the
+# template is found whether run from the repo or through ~/bin.
+SELF="${BASH_SOURCE[0]}"
+while [ -L "$SELF" ]; do
+    link="$(readlink "$SELF")"
+    case "$link" in
+        /*) SELF="$link" ;;
+        *)  SELF="$(dirname "$SELF")/$link" ;;
+    esac
+done
+REPO_ROOT="$(cd "$(dirname "$SELF")/.." && pwd)"
+TMPL="$REPO_ROOT/config/opencode/opencode.json.tmpl"
+OUT="$REPO_ROOT/config/opencode/opencode.json"
+
+[ -f "$TMPL" ] || { printf 'opencode-config: missing %s\n' "$TMPL" >&2; exit 1; }
+
+# Installed ollama tags. If ollama is absent or its server is down, this is
+# empty - which correctly yields a config with no ollama models.
+installed="$(ollama list 2>/dev/null | awk 'NR>1 {print $1}' || true)"
+
+OC_INSTALLED="$installed" python3 - "$TMPL" "$OUT" <<'PY'
+import json, os, sys
+
+tmpl, out = sys.argv[1], sys.argv[2]
+installed = set(os.environ.get("OC_INSTALLED", "").split())
+
+with open(tmpl) as f:
+    cfg = json.load(f)
+
+ollama = cfg.get("provider", {}).get("ollama")
+if ollama is not None:
+    catalog = ollama.get("models", {})
+    ollama["models"] = {k: v for k, v in catalog.items() if k in installed}
+    kept = len(ollama["models"])
+else:
+    kept = 0
+
+with open(out, "w") as f:
+    json.dump(cfg, f, indent=2)
+    f.write("\n")
+
+print(f"opencode-config: {kept} ollama model(s) installed -> {out}", file=sys.stderr)
+PY

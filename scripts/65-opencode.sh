@@ -1,18 +1,16 @@
 #!/bin/bash
 # OpenCode configuration.
 #
-# Symlinks ~/.config/opencode/{opencode.json,prompts,AGENTS.md} to the copies
-# in this repo, so the config - the agent prompt files it references with
-# relative `{file:./prompts/...}` paths, and the global AGENTS.md OpenCode
-# auto-loads every session - is version-controlled and edits take effect
-# immediately. OpenCode resolves those relative refs against the symlink's own
-# directory, so the prompts dir MUST be linked alongside the json; linking only
-# the json makes OpenCode look for ~/.config/opencode/prompts/*.txt and fail to
-# load the config.
+# opencode.json is generated from opencode.json.tmpl by bin/opencode-config,
+# with only the ollama models actually installed (OpenCode does not auto-detect
+# them), then symlinked into ~/.config/opencode alongside the prompts dir and
+# the global AGENTS.md OpenCode auto-loads every session. Edit the *template*,
+# not the generated json. OpenCode resolves the config's relative
+# `{file:./prompts/...}` refs against the symlink's own directory, so the
+# prompts dir MUST be linked next to the json.
 #
-# This step only ever touches those two paths: anything `opencode auth login`
-# stores lives in ~/.local/share/opencode/auth.json, a different directory that
-# is never read, written or linked here.
+# This step only touches those paths: anything `opencode auth login` stores
+# lives in ~/.local/share/opencode/auth.json, never read, written or linked here.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -20,13 +18,16 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_DIR="$REPO_DIR/config/opencode"
 DEST_DIR="$HOME/.config/opencode"
 
-if [ ! -f "$SRC_DIR/opencode.json" ]; then
-    log_error "missing $SRC_DIR/opencode.json"
+if [ ! -f "$SRC_DIR/opencode.json.tmpl" ]; then
+    log_error "missing $SRC_DIR/opencode.json.tmpl"
     exit 1
 fi
 
 if [ "${DRY_RUN:-0}" != "1" ]; then
     run mkdir -p "$DEST_DIR"
+    # Generate opencode.json from the template with only the installed ollama
+    # models, so the picker matches `ollama list`. Regenerated every run.
+    run "$REPO_DIR/bin/opencode-config"
 fi
 
 # Link one repo path into ~/.config/opencode. Anything already linked to us is
