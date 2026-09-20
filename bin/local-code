@@ -1,18 +1,22 @@
 #!/bin/bash
 # local-code - control panel for the local coding models used by OpenCode.
 #
-# Three tiers of Qwen3-Coder-30B-A3B, one Hub repo at different quants, kept
-# under a short ollama tag so `ollama list` and OpenCode's model picker both
-# show `qwen3-coder:small|mid|big` instead of the long hf.co checkpoint name:
+# Three tiers of Qwen3-Coder-30B-A3B, one Hub repo at different quants, built
+# into a short ollama tag (`ollama create` from a downloaded GGUF, with the
+# context window baked in) so `ollama list` and OpenCode's model picker show
+# `qwen3-coder:small|mid|big` instead of the long hf.co checkpoint name:
 #
 #   small  IQ4_XS  ~16GB  fastest, lowest RAM headroom needed
 #   mid    Q5_K_M  ~22GB  balanced
 #   big    Q6_K    ~25GB  quality ceiling for a 48GB machine (see below)
 #
+# Not `ollama pull hf.co/...`: HuggingFace serves GGUF blobs from a separate CDN
+# host (xet) via a redirect ollama refuses ("blocked redirect to a different
+# host"). curl follows it, so each tier is downloaded then built locally.
+#
 # Q8 is deliberately not offered here: on a 48GB Mac it leaves almost no
 # headroom for KV cache or anything else running, for a quality jump that is
-# the flattest part of the curve on a sparse MoE like this one. Pull it by
-# hand if you ever want it: `ollama pull hf.co/$HF_REPO:Q8_0`.
+# the flattest part of the curve on a sparse MoE like this one.
 #
 # Usage:
 #   local-code list                 show the tiers, what's pulled, sizes
@@ -22,6 +26,12 @@
 set -euo pipefail
 
 HF_REPO="unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
+MODEL="Qwen3-Coder-30B-A3B-Instruct"   # GGUF filename prefix inside that repo
+
+# Context window baked into each tier at `ollama create` time. ollama otherwise
+# defaults to ~4k, too small for coding; the old :30b-32k tags relied on 32k.
+# Override with LOCAL_CODE_NUM_CTX if you have the RAM for more.
+NUM_CTX="${LOCAL_CODE_NUM_CTX:-32768}"
 
 tier_quant() {
     case "$1" in
@@ -33,7 +43,7 @@ tier_quant() {
 }
 
 # Approximate .gguf size on the Hub, for the disk-space check before pulling.
-# Not authoritative - `ollama pull` reports the real number as it downloads.
+# Not authoritative - curl shows the real size as it downloads.
 tier_size_gb() {
     case "$1" in
         small) echo 17 ;;
@@ -57,7 +67,7 @@ need_ollama() {
 }
 
 local_name() { printf '%s:%s\n' "$TAG" "$1"; }
-hub_ref()    { printf 'hf.co/%s:%s\n' "$HF_REPO" "$(tier_quant "$1")"; }
+gguf_url()   { printf 'https://huggingface.co/%s/resolve/main/%s-%s.gguf?download=true\n' "$HF_REPO" "$MODEL" "$(tier_quant "$1")"; }
 
 is_pulled() {
     ollama list 2>/dev/null | awk '{print $1}' | grep -qxF "$(local_name "$1")"
@@ -93,24 +103,33 @@ cmd_pull() {
         return 0
     fi
 
+    # The GGUF is downloaded to a temp file, then `ollama create` copies it into
+    # ollama's store - both exist at once, so check for ~2x the size.
+    local need free
     need="$(tier_size_gb "$tier")"
     free="$(free_gb)"
-    if [ -n "$free" ] && [ "$free" -lt "$need" ]; then
-        err "only ${free}GB free, this tier needs ~${need}GB - run 'local-code wipe' on one you don't need first"
+    if [ -n "$free" ] && [ "$free" -lt "$((need * 2))" ]; then
+        err "only ${free}GB free; download + create needs ~$((need * 2))GB transiently - 'local-code wipe' one you don't need first"
         exit 1
     fi
 
-    local hub; hub="$(hub_ref "$tier")"
-    log "pulling $hub"
-    ollama pull "$hub"
+    local url tmp modelfile
+    url="$(gguf_url "$tier")"
+    tmp="${TMPDIR:-/tmp}/local-code-${MODEL}-$(tier_quant "$tier").gguf"
 
-    log "renaming to $(local_name "$tier")"
-    # `ollama cp` copies only the manifest - it does not duplicate the weights
-    # on disk, so this rename is free.
-    ollama cp "$hub" "$(local_name "$tier")"
-    # Safe to remove: `ollama rm` only deletes blobs no other manifest (like
-    # the copy just made) still references.
-    ollama rm "$hub" >/dev/null
+    # curl follows HF's cross-host CDN redirect that `ollama pull` refuses.
+    # `-C -` resumes a partial file, so an interrupted pull picks up where it left
+    # off; the temp is removed only on a successful create.
+    log "downloading $(tier_quant "$tier") gguf (~${need}GB, resumable)"
+    curl -fL -C - -o "$tmp" "$url"
+
+    modelfile="$(mktemp)"
+    printf 'FROM %s\nPARAMETER num_ctx %s\n' "$tmp" "$NUM_CTX" > "$modelfile"
+
+    log "creating $(local_name "$tier") (num_ctx=$NUM_CTX)"
+    ollama create "$(local_name "$tier")" -f "$modelfile"
+
+    rm -f "$modelfile" "$tmp"
 }
 
 cmd_wipe() {

@@ -32,11 +32,11 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   that's a silent, painful truncation and a regression from the old setup.
 - **Options:** (a) set `num_ctx` in `local-code` via a Modelfile at create time;
   (b) set context in the opencode provider `options`; (c) accept 4k.
-- **Decision (decided):** route (b) — set context in the opencode provider
-  `options`. **Caveat to verify at build time:** ollama's context is usually a
-  server-side model param (`num_ctx`), not a client option over the OpenAI-
-  compatible `/v1` API; if the provider option isn't honored, fall back to a
-  Modelfile `num_ctx` in `local-code` (route a).
+- **Decision (done, route a):** superseded the provider-options plan. The F11
+  rewrite builds each tier with `ollama create` from a Modelfile, so `num_ctx`
+  is baked in there (`PARAMETER num_ctx`, default 32768, env-overridable via
+  `LOCAL_CODE_NUM_CTX`). This is the robust server-side fix and needed no
+  provider-options change. Verify the value sticks with `ollama show`.
 
 ### F2 — No top-level default model
 - **Severity:** medium · **Status:** open · **Basis:** verified
@@ -137,4 +137,7 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   F1's provider-options route); (b) pull an equivalent quant from ollama's own
   registry (e.g. `qwen3-coder:30b`) — simple, but loses exact unsloth quant
   control; (c) leave broken, revisit when ollama fixes cross-host redirects.
-- **Decision:** _pending Q&A_
+- **Decision (done, route a):** `local-code` now downloads the GGUF via curl
+  (verified it follows the redirect: HTTP 200, ~25GB) and builds the tag with
+  `ollama create` from a Modelfile, `num_ctx` baked in. Verified with a HEAD
+  request; the full `pull big` is the end-to-end confirmation.
