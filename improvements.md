@@ -52,7 +52,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
 - Every agent points at `ollama/qwen3-coder:*` which isn't pulled. Nothing works
   until `local-code pull`.
 - **Options:** (a) pull one tier now (which?); (b) stay at Stage 0 by design.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** pull `big` now (`local-code pull big`). Makes the setup
+  usable and lets F1's context fix be verified empirically.
 
 ### F4 — github MCP can't run as configured
 - **Severity:** medium · **Status:** open · **Basis:** verified
@@ -62,7 +63,9 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
 - **Options:** (a) add a runtime (colima/orbstack/docker) to the Brewfile +
   document the PAT; (b) remove the MCP block; (c) keep disabled, document the
   prereqs in a comment.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** route (a) — add a container runtime (colima + docker
+  CLI) to the Brewfile and document the PAT; keep `enabled:false` with clear
+  instructions to flip it on once colima is running and the PAT is set.
 
 ### F5 — "Tiers" are one model at three quants
 - **Severity:** low / clarity · **Status:** open · **Basis:** verified
@@ -72,7 +75,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   lever, which overstates it.
 - **Options:** (a) soften the README wording; (b) actually differentiate (e.g.
   a genuinely different model for one role); (c) leave as-is.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** route (a) — soften the README wording; clarify tiers
+  are quant/RAM tradeoffs of one model and agents differ by prompt+permissions.
 
 ### F6 — AGENTS.md is global (applies to every project)
 - **Severity:** decision · **Status:** open · **Basis:** verified
@@ -91,7 +95,8 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   shape.
 - **Options:** (a) accept (documented now); (b) switch to absolute paths;
   (c) symlink the whole `~/.config/opencode` dir instead of per-file.
-- **Decision:** _pending Q&A_
+- **Decision (wontfix):** route (a) — accept; it's documented and works.
+  Revisit if it breaks again.
 
 ### F8 — No escape hatch to a stronger model
 - **Severity:** decision · **Status:** open · **Basis:** inferred
@@ -107,7 +112,7 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
 - `local-code` pulls moving tags (`:Q6_K`), not digests, so "the same setup"
   changes as upstream re-uploads.
 - **Options:** (a) pin digests; (b) accept drift (fine for personal use).
-- **Decision:** _pending Q&A_
+- **Decision (wontfix):** route (b) — accept drift; fine for personal use.
 
 ### F10 — Reconsider OpenCode Agent Skills
 - **Severity:** option · **Status:** open · **Basis:** verified (feature exists)
@@ -115,4 +120,5 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   agents/AGENTS.md.
 - **Options:** (a) leave the agents/AGENTS.md model as-is; (b) port some
   capabilities to OpenCode skills; (c) hybrid.
-- **Decision:** _pending Q&A_
+- **Decision (decided):** explore later — keep agents/AGENTS.md as-is for now;
+  evaluate OpenCode Agent Skills down the line. Tracked here as the open task.
