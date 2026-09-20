@@ -10,13 +10,16 @@
       },
       "models": {
         "qwen3-coder:small": {
-          "name": "Qwen3 Coder 30B (small, IQ4_XS)"
+          "name": "Qwen3 Coder 30B (small, IQ4_XS)",
+          "limit": { "context": 32768, "output": 8192 }
         },
         "qwen3-coder:mid": {
-          "name": "Qwen3 Coder 30B (mid, Q5_K_M)"
+          "name": "Qwen3 Coder 30B (mid, Q5_K_M)",
+          "limit": { "context": 32768, "output": 8192 }
         },
         "qwen3-coder:big": {
-          "name": "Qwen3 Coder 30B (big, Q6_K)"
+          "name": "Qwen3 Coder 30B (big, Q6_K)",
+          "limit": { "context": 32768, "output": 8192 }
         }
       }
     },
