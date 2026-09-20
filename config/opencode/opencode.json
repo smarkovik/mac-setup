@@ -34,6 +34,15 @@
   },
 
   "agent": {
+    "planner": {
+      "mode": "primary",
+      "model": "ollama/qwen3-coder:big",
+      "prompt": "{file:./prompts/planner.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    },
     "architect": {
       "mode": "primary",
       "model": "ollama/qwen3-coder:big",

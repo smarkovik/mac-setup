@@ -6,4 +6,7 @@ auth.json
 # Backups made when a step moves an existing config aside.
 *.backup-*
 
+# This repo's AI setup lives in OpenCode (config/opencode), not Claude Code.
+.claude/
+
 .DS_Store

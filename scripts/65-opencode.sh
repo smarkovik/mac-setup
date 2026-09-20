@@ -1,9 +1,10 @@
 #!/bin/bash
 # OpenCode configuration.
 #
-# Symlinks ~/.config/opencode/{opencode.json,prompts} to the copies in this
-# repo, so the config - and the agent prompt files it references with relative
-# `{file:./prompts/...}` paths - is version-controlled and edits take effect
+# Symlinks ~/.config/opencode/{opencode.json,prompts,AGENTS.md} to the copies
+# in this repo, so the config - the agent prompt files it references with
+# relative `{file:./prompts/...}` paths, and the global AGENTS.md OpenCode
+# auto-loads every session - is version-controlled and edits take effect
 # immediately. OpenCode resolves those relative refs against the symlink's own
 # directory, so the prompts dir MUST be linked alongside the json; linking only
 # the json makes OpenCode look for ~/.config/opencode/prompts/*.txt and fail to
@@ -61,3 +62,4 @@ link_config() {
 
 link_config "$SRC_DIR/opencode.json" "$DEST_DIR/opencode.json"
 link_config "$SRC_DIR/prompts" "$DEST_DIR/prompts"
+link_config "$SRC_DIR/AGENTS.md" "$DEST_DIR/AGENTS.md"
