@@ -209,11 +209,15 @@ its own model and permissions, prompts in `config/opencode/prompts/`:
 | `reviewer` | subagent | `qwen3-coder:big` | deny | deny |
 
 `planner`, `architect` and `reviewer` cannot edit files - they read and
-reason, so a bad call costs nothing, and `big` (Q6) trades speed for reasoning
-quality since there's no tight loop to keep fast. `debugger` can run commands
-and edit, because reproducing a failure and fixing it needs both; it runs on
-`mid` (Q5) because that loop is interactive and speed matters more there than
-the last bit of quality.
+reason, so a bad call costs nothing. `debugger` can run commands and edit,
+because reproducing a failure and fixing it needs both.
+
+The `big`/`mid` split is a quantization/RAM tradeoff of the *same* 30B model,
+not a capability tier: `big` (Q6) keeps a little more fidelity where there is
+no tight loop to stay fast for; `debugger` runs `mid` (Q5) because that loop is
+interactive and lighter matters more than the marginal quality of a higher
+quant. What actually differentiates the agents is their prompt and permissions,
+not the model behind them.
 
 `planner` breaks a spec into small, vertically-sliced tasks before any code;
 `architect` reviews or designs structure; `debugger` reproduces and fixes;
@@ -262,10 +266,12 @@ review: "what else calls this" is a structural question, not a text search.
 ```
 
 Lets the `reviewer` agent look at a real PR - diffs, check runs, existing
-review threads - instead of only a local diff. **Disabled by default**:
-it needs Docker (not installed by this repo - a real dependency, add
-`cask "docker"` yourself if you want it) and a GitHub PAT in
-`GITHUB_PERSONAL_ACCESS_TOKEN`. Flip `enabled` to `true` once both exist.
+review threads - instead of only a local diff. **Disabled by default.** The
+runtime it needs is in the Brewfile (`colima` + `docker`); to turn it on:
+
+1. `colima start` - starts the container daemon (once per boot).
+2. Create a GitHub PAT and export `GITHUB_PERSONAL_ACCESS_TOKEN`.
+3. Flip `enabled` to `true` in `config/opencode/opencode.json`.
 
 Sentry MCP (`@sentry/mcp-server`) is a reasonable second addition if you use
 Sentry, for the same reason - direct issue/error lookup instead of pasting

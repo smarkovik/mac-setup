@@ -48,6 +48,12 @@ cask "gitup-app"
 # One-time setup is per-account and not scripted here: `cloudflared tunnel login`,
 # then create/route a tunnel. Docs: https://developers.cloudflare.com/tunnel/
 brew "cloudflared"
+# Container runtime for the github MCP in config/opencode/opencode.json, which
+# runs ghcr.io/github/github-mcp-server via `docker run`. colima is the daemon
+# (start it once with `colima start`); docker is the CLI client. Both are needed
+# before that MCP can be enabled - see the README (github MCP) for the steps.
+brew "colima"
+brew "docker"
 brew "mc"
 brew "git-lfs"
 brew "ffmpeg"
