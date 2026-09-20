@@ -148,21 +148,6 @@ dset com.apple.ActivityMonitor SortDirection -int 0
 #   dset com.apple.Safari SuppressSearchSuggestions -bool true
 #   dset com.apple.Safari SendDoNotTrackHTTPHeader -bool true
 #
-#   # com.apple.universalaccess is TCC-protected (its plist carries a
-#   # com.apple.macl gate). cfprefsd silently rejects the write - "Could not
-#   # write domain com.apple.universalaccess; exiting" - unless the terminal
-#   # running this has Full Disk Access (or Accessibility). Rather than make
-#   # everyone grant a broad permission for one toggle, set it by hand in
-#   # System Settings > Accessibility > Zoom > "Follow keyboard focus".
-#   dset com.apple.universalaccess closeViewZoomFollowsFocus -bool true
-#
-#   # com.apple.mail is sandboxed - its prefs live in a TCC-protected container
-#   # (~/Library/Containers/com.apple.mail/...) with a com.apple.macl gate, so
-#   # cfprefsd rejects the write ("Could not write domain ...; exiting") unless
-#   # the terminal running this has Full Disk Access. No GUI toggle for this
-#   # key; grant FDA and re-enable if you want it scripted.
-#   dset com.apple.mail AddressesIncludeNameOnPasteboard -bool false
-#
 #   # Screen-saver password settings moved to a protected domain; setting them
 #   # via `defaults` no longer takes effect. Use System Settings > Lock Screen.
 #   dset com.apple.screensaver askForPassword -int 1
