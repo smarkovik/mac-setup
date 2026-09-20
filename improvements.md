@@ -122,3 +122,19 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   capabilities to OpenCode skills; (c) hybrid.
 - **Decision (decided):** explore later — keep agents/AGENTS.md as-is for now;
   evaluate OpenCode Agent Skills down the line. Tracked here as the open task.
+
+### F11 — local-code pull is broken (ollama refuses HF's cross-host CDN redirect)
+- **Severity:** high (blocks F3 and all local models) · **Status:** open · **Basis:** verified
+- Discovered while executing F3. `ollama pull hf.co/unsloth/...:Q6_K` fails with
+  `blocked redirect to a different host`: HuggingFace now serves GGUF blobs from
+  its xet CDN (`us.aws.cdn.hf.co`) via a cross-host redirect, and ollama refuses
+  cross-host redirects. Affects all three tiers. ollama 0.34.2 is already the
+  latest brew version, so upgrading doesn't fix it. Not a sandbox/network/disk
+  issue (reproduced with the sandbox disabled; 765GB free).
+- **Options:** (a) download the GGUF directly (curl follows the redirect fine)
+  and `ollama create` from a local Modelfile — bypasses the bug AND lets
+  `num_ctx` be baked in, which also resolves **F1** the robust way (supersedes
+  F1's provider-options route); (b) pull an equivalent quant from ollama's own
+  registry (e.g. `qwen3-coder:30b`) — simple, but loses exact unsloth quant
+  control; (c) leave broken, revisit when ollama fixes cross-host redirects.
+- **Decision:** _pending Q&A_
