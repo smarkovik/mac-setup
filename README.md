@@ -38,6 +38,33 @@ when something actually changed, so a run with no drift closes none of your
 Finder windows. `--force` rewrites every setting regardless of its current
 value.
 
+### One step failing doesn't stop the rest
+
+This is meant to be pushed to and re-run over time, not just for a fresh
+laptop, so a step that fails is reported and skipped rather than stopping
+everything after it - a broken Brewfile cask shouldn't block `git`, `ssh`,
+`zsh`, or `opencode` from doing their job. Each step also prints which
+number it is and how long it took:
+
+```
+==> [2/10] packages
+     ...
+ ===> step 'packages' failed after 41s (exit 1) - continuing with the remaining steps
+ ===> once it is fixed, re-run just that step:
+ ===>     ./mac-setup.sh --only packages
+
+==> [3/10] python
+     ...
+ ===> finished in 96s with 1 step(s) needing attention:
+ ===>   - packages (re-run: ./mac-setup.sh --only packages)
+```
+
+`brew bundle` itself already keeps installing the rest of the Brewfile past
+one bad cask - this is the same idea one level up, across steps. A cask that
+fails because of something already in `/Applications` (a version mismatch,
+usually) needs a manual look, not automatic deleting - `rm -rf` the app
+yourself, then `--only packages` again.
+
 ### Layout
 
 | Path | What it is |
