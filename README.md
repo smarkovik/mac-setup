@@ -83,9 +83,9 @@ yourself, then `--only packages` again.
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
 | `scripts/80-local-code.sh` | Link `local-code` into `~/bin` |
 | `config/opencode/opencode.json` | The OpenCode config itself — edit this |
-| `config/opencode/prompts/` | System prompts for the architect/debugger/reviewer agents |
+| `config/opencode/prompts/` | System prompts for the planner/architect/debugger/reviewer agents |
+| `config/opencode/AGENTS.md` | Always-on global guidance OpenCode loads every session |
 | `bin/local-code` | Control panel: pull/run/wipe the local coding models |
-| `.claude/skills/` | Architecture review, debugging and code review skills (OpenCode reads these too) |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -170,7 +170,7 @@ checkpoint filename:
 | `mid` | Q5_K_M | 22 GB | `qwen3-coder:mid` |
 | `big` | Q6_K | 25 GB | `qwen3-coder:big` |
 
-`local-code` (symlinked to `~/bin` by `scripts/75-local-code.sh`, same
+`local-code` (symlinked to `~/bin` by `scripts/80-local-code.sh`, same
 never-overwrite pattern as the OpenCode step) drives all three:
 
 ```sh
@@ -196,26 +196,44 @@ Hub reference to a short tag after pulling is free; `ollama rm` only deletes
 blobs no other manifest still references, so removing the long name right
 after is safe.
 
-#### Agents: architect, debugger, reviewer
+#### Agents: planner, architect, debugger, reviewer
 
-Three agents in `config/opencode/opencode.json`, each scoped to one job with
+Four agents in `config/opencode/opencode.json`, each scoped to one job with
 its own model and permissions, prompts in `config/opencode/prompts/`:
 
 | Agent | Mode | Model | Edit | Bash |
 |---|---|---|---|---|
+| `planner` | primary | `qwen3-coder:big` | deny | ask |
 | `architect` | primary | `qwen3-coder:big` | deny | ask |
 | `debugger` | subagent | `qwen3-coder:mid` | ask | allow |
 | `reviewer` | subagent | `qwen3-coder:big` | deny | deny |
 
-`architect` and `reviewer` cannot edit files - they read and reason, so a
-bad call costs nothing, and `big` (Q6) trades speed for reasoning quality
-since there's no tight loop to keep fast. `debugger` can run commands and
-edit, because reproducing a failure and fixing it needs both; it runs on
-`mid` (Q5) because that loop is interactive and speed matters more there
-than the last bit of quality.
+`planner`, `architect` and `reviewer` cannot edit files - they read and
+reason, so a bad call costs nothing, and `big` (Q6) trades speed for reasoning
+quality since there's no tight loop to keep fast. `debugger` can run commands
+and edit, because reproducing a failure and fixing it needs both; it runs on
+`mid` (Q5) because that loop is interactive and speed matters more there than
+the last bit of quality.
+
+`planner` breaks a spec into small, vertically-sliced tasks before any code;
+`architect` reviews or designs structure; `debugger` reproduces and fixes;
+`reviewer` reads a diff for real, most-severe-first findings.
 
 Invoke a subagent with `@debugger` or `@reviewer` in OpenCode, or switch to
-`architect` as your primary agent.
+`planner` or `architect` as your primary agent.
+
+#### AGENTS.md: always-on house style
+
+`config/opencode/AGENTS.md` is symlinked into `~/.config/opencode` and loaded
+by OpenCode on every session, so its guidance applies to every agent. It holds
+the default working style - lazy in the good way: YAGNI, reuse before writing,
+stdlib and native platform features before dependencies, the shortest change
+that actually works, root-cause over symptom. Edit it to change how every
+agent behaves by default.
+
+> This repo's AI setup lives entirely in OpenCode - agents, prompts and
+> `AGENTS.md`, all under `config/opencode/` - not in Claude Code. `.claude/`
+> is gitignored.
 
 #### LSP
 
