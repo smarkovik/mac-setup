@@ -186,7 +186,32 @@ sync_config() {
 }
 
 usage() {
-    awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$0"
+    cat <<'EOF'
+local-code - run local coding models in OpenCode
+
+Three quant tiers of one model (Qwen3-Coder-30B-A3B) - same weights, trading
+size and RAM for a little quality:
+
+    small   IQ4_XS   ~16GB   fastest, least memory
+    mid     Q5_K_M   ~22GB   balanced
+    big     Q6_K     ~25GB   best quality that fits a 48GB Mac
+
+Commands:
+    local-code list                       tiers, which are downloaded, disk free
+    local-code pull   small|mid|big|all   download a tier (or all) and build it
+    local-code run    small|mid|big       pull if needed, start ollama, open OpenCode
+    local-code wipe   small|mid|big|all   delete a tier to free disk
+    local-code sync                       rebuild opencode.json to match what's downloaded
+    local-code help                       show this
+
+Notes:
+    - OpenCode's model picker shows only downloaded tiers; pull/wipe/sync keep it
+      in step (OpenCode can't auto-detect ollama models).
+    - Context window defaults to 32k. For more, if you have the RAM:
+          LOCAL_CODE_NUM_CTX=65536 local-code pull big
+    - Tiers download from Hugging Face and build locally with `ollama create` -
+      ollama can't `pull` them directly (it refuses HF's cross-host CDN redirect).
+EOF
 }
 
 case "${1:-}" in
@@ -217,6 +242,6 @@ case "${1:-}" in
         tier_quant "$2" >/dev/null || { err "unknown tier: $2"; exit 2; }
         cmd_run "$2"
         ;;
-    -h|--help|"") usage ;;
+    help|-h|--help|"") usage ;;
     *) err "unknown command: $1"; usage; exit 2 ;;
 esac

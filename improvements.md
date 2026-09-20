@@ -141,3 +141,14 @@ Rules (opencode.ai/docs/rules/), Skills (opencode.ai/docs/skills/).
   (verified it follows the redirect: HTTP 200, ~25GB) and builds the tag with
   `ollama create` from a Modelfile, `num_ctx` baked in. Verified with a HEAD
   request; the full `pull big` is the end-to-end confirmation.
+
+### F12 — OpenCode picker lists models that aren't downloaded
+- **Severity:** medium (usability) · **Status:** done · **Basis:** verified
+- OpenCode does not auto-discover ollama models (upstream issues #6231, #12243),
+  so the statically-declared tiers all appeared even at Stage 0, and picking an
+  unpulled one errors "not found". The tooltip also showed "Context 0".
+- **Decision (done):** `opencode.json` is generated from `opencode.json.tmpl` by
+  `bin/opencode-config`, keeping only the ollama tiers in `ollama list`;
+  `local-code` (pull/wipe/`sync`) and the setup step regenerate it. Each model
+  also declares `limit.context` (32768), fixing "Context 0". Result: N pulled =>
+  N shown, none => none.

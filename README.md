@@ -82,10 +82,11 @@ yourself, then `--only packages` again.
 | `scripts/65-opencode.sh` | Link OpenCode's config into this repo |
 | `scripts/70-macos-defaults.sh` | macOS UI preferences |
 | `scripts/80-local-code.sh` | Link `local-code` into `~/bin` |
-| `config/opencode/opencode.json` | The OpenCode config itself — edit this |
+| `config/opencode/opencode.json.tmpl` | The OpenCode config — **edit this** (source of truth) |
+| `bin/opencode-config` | Generates `opencode.json` from the template with only installed models |
 | `config/opencode/prompts/` | System prompts for the planner/architect/debugger/reviewer agents |
 | `config/opencode/AGENTS.md` | Always-on global guidance OpenCode loads every session |
-| `bin/local-code` | Control panel: pull/run/wipe the local coding models |
+| `bin/local-code` | Control panel: pull/run/wipe/sync the local coding models |
 | `scripts/90-passwordless-sudo.sh` | Opt-in, see below |
 | `tools/validate-brewfile.sh` | Check every `Brewfile` token exists |
 | `tools/audit-defaults.sh` | Find which key macOS really uses for a setting |
@@ -113,9 +114,13 @@ reason.
 
 ### OpenCode configuration
 
-`~/.config/opencode/opencode.json` is symlinked to `config/opencode/opencode.json`
-in this repo, so the config is version-controlled and edits take effect
-immediately — no copy step, nothing to re-sync.
+`config/opencode/opencode.json` is **generated** from
+`config/opencode/opencode.json.tmpl` (the committed source of truth) by
+`bin/opencode-config`, then symlinked into `~/.config/opencode`. The generator
+copies the template but keeps only the ollama models you have actually
+downloaded, so OpenCode's picker matches `ollama list` (see `local-code`
+below). **Edit the template**, then re-run the step — or `local-code sync` — to
+regenerate:
 
 ```sh
 ./mac-setup.sh --only opencode
@@ -123,12 +128,7 @@ immediately — no copy step, nothing to re-sync.
 
 If you already have a config there, it is **moved aside** to
 `opencode.json.backup-<timestamp>`, never overwritten. To keep those settings,
-copy the backup over the repo's copy and re-run:
-
-```sh
-cp ~/.config/opencode/opencode.json.backup-* config/opencode/opencode.json
-./mac-setup.sh --only opencode
-```
+merge them into the template and re-run.
 
 **It points at local model servers, not a cloud provider.** Both entries use
 `@ai-sdk/openai-compatible` against an OpenAI-shaped endpoint on localhost, so
@@ -139,10 +139,11 @@ neither needs an API key:
 | `ollama` | `http://localhost:11434/v1` | `ollama serve` |
 | `llamacpp` | `http://127.0.0.1:8080/v1` | `llama-server` |
 
-The model IDs in each `models` block are placeholders — replace them with what
-your servers actually expose (`ollama list`, or whatever you passed to
-`llama-server -m`). OpenCode sends the ID through verbatim; a name that does not
-exist on the server fails at request time, not at load time.
+The ollama models are managed for you: `local-code` downloads the tiers and
+regenerates the config so only the ones you have appear. The `llamacpp` entry's
+single `local` model is whatever you point `llama-server -m` at. OpenCode sends
+the ID through verbatim, so a model not actually being served fails at request
+time, not at load time.
 
 There are no credentials here to protect. If you ever do add a cloud provider,
 put the key in `~/.local/share/opencode/auth.json` via `opencode auth login` —
@@ -159,10 +160,8 @@ reference — `model`, `agent`, `mcp`, `permission`, `formatter`, `lsp` — is a
 
 #### `local-code` — the local model control panel
 
-Three quants of the same model (`unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF`
-on the Hugging Face Hub), pulled through `ollama` and renamed to a short tag
-so `ollama list` and OpenCode's model picker both show a size, not a
-checkpoint filename:
+Three quant tiers of one model (`unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF`) —
+same weights, trading size and RAM for a little quality:
 
 | Tier | Quant | ~Size | Ollama tag |
 |---|---|---|---|
@@ -170,31 +169,37 @@ checkpoint filename:
 | `mid` | Q5_K_M | 22 GB | `qwen3-coder:mid` |
 | `big` | Q6_K | 25 GB | `qwen3-coder:big` |
 
-`local-code` (symlinked to `~/bin` by `scripts/80-local-code.sh`, same
-never-overwrite pattern as the OpenCode step) drives all three:
+`local-code` (symlinked to `~/bin` by `scripts/80-local-code.sh`) drives them —
+`local-code help` prints the full summary:
 
 ```sh
-local-code list            # what's pulled, and disk free
-local-code pull mid        # or: small | big | all
+local-code list            # tiers, which are downloaded, disk free
+local-code pull mid        # download a tier (or: small | big | all)
 local-code run big         # pull if needed, start ollama, launch OpenCode
-local-code wipe small      # or: mid | big | all - frees the disk back up
+local-code wipe small      # delete a tier to free disk (or: mid | big | all)
+local-code sync            # rebuild opencode.json to match what's downloaded
 ```
 
-`pull` and `wipe` are the point: at 25 GB for the largest tier, keeping all
-three on disk permanently is a real cost, so the workflow is to pull the
-tier you need, run it, and wipe it when you are done with it rather than
-let three quants sit there.
+**The picker shows only what you've downloaded.** OpenCode can't auto-detect
+ollama models, so `pull`, `wipe` and `sync` regenerate `opencode.json` from the
+template with only the installed tiers — three pulled, three shown; none, none.
 
-Q8_0 is deliberately not offered as a tier: on 48 GB of unified memory it
-leaves almost no headroom for KV cache or anything else running, for a
-quality jump that is the flattest part of the curve on a sparse MoE model
-like this one. Pull it manually if you ever need to check that claim
-yourself: `ollama pull hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_0`.
+**Tiers download, they aren't `ollama pull`ed.** Hugging Face serves the GGUF
+blobs from a separate CDN host via a redirect `ollama pull` refuses ("blocked
+redirect to a different host"), so `local-code` fetches the file with `curl`
+(resumable) and builds the tag locally with `ollama create`.
 
-`ollama cp` copies only the manifest, not the weights, so renaming the long
-Hub reference to a short tag after pulling is free; `ollama rm` only deletes
-blobs no other manifest still references, so removing the long name right
-after is safe.
+**The context window is baked in at 32k** (`PARAMETER num_ctx`), not left to
+ollama's ~4k default. Override per pull if you have the RAM:
+
+```sh
+LOCAL_CODE_NUM_CTX=65536 local-code pull big
+```
+
+`pull`/`wipe` are the point: at 25 GB for the largest tier, pull what you need,
+run it, wipe it when done rather than let three quants sit on disk. Q8_0 isn't
+offered — on 48 GB it leaves almost no KV-cache headroom for a quality jump
+that's the flattest part of the curve on a sparse MoE.
 
 #### Agents: planner, architect, debugger, reviewer
 
