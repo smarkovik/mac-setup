@@ -244,6 +244,44 @@ agent behaves by default.
 > `AGENTS.md`, all under `config/opencode/` - not in Claude Code. `.claude/`
 > is gitignored.
 
+#### Platform: markdown agents, skills, and the doctor
+
+`scripts/66-opencode-platform.sh` (the step after `opencode`) symlinks three
+more things from `config/opencode/` into `~/.config/opencode`, so they install
+automatically on every `./mac-setup.sh` and stay version-controlled here:
+
+- **Markdown agents** (`agents/{builder,tester,security}.md`) — agents defined
+  as markdown with frontmatter, alongside the JSON `planner`/`architect`/… ones.
+- **Skills** (`skills/<name>/SKILL.md`) — reusable task playbooks OpenCode
+  invokes on its own via the built-in `skill` tool, matching on each skill's
+  `description`. Four ship here: feature-development, production-debugging,
+  pull-request-review, security-review.
+- **`bin/github-mcp-via-gh.sh`** — the GitHub MCP, run through `gh` (no Docker,
+  no PAT env; needs `gh auth login`).
+
+**Add a skill** — create a folder and a `SKILL.md`; no config change needed:
+
+```
+config/opencode/skills/my-skill/SKILL.md
+---
+name: my-skill                       # lowercase-hyphens, matches the folder
+description: Use when <the exact trigger situation>.   # what the model matches on
+---
+# My skill
+1. Step one…
+```
+
+It goes live on the next `./mac-setup.sh` (or `--only opencode-platform`) via
+the `skills` symlink. Keep the `description` sharp and trigger-y — a local model
+only reaches for a skill when it clearly matches the situation.
+
+**Per-project rules** — OpenCode also reads an `AGENTS.md` at the root of
+whatever project you open, *in addition to* the global one above. Drop an
+`AGENTS.md` in a repo and it applies there automatically; nothing to configure.
+
+**Check it all** — `opencode-doctor` (installed to `~/bin`) verifies the
+symlinks, config, agents, skills, `gh` auth, and which model tiers are pulled.
+
 #### LSP
 
 ```json

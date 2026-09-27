@@ -55,6 +55,12 @@ link_config "$SRC_DIR/agents" "$DEST_DIR/agents"
 link_config "$SRC_DIR/skills" "$DEST_DIR/skills"
 link_config "$SRC_DIR/bin" "$DEST_DIR/bin"
 
+# Expose the health check on PATH (~/bin, created by scripts/30-dirs.sh).
+if [ "${DRY_RUN:-0}" != "1" ]; then
+    run mkdir -p "$HOME/bin"
+fi
+link_config "$REPO_DIR/bin/opencode-doctor" "$HOME/bin/opencode-doctor"
+
 # Regenerate opencode.json so MCP github (gh wrapper) from the tmpl is live.
 if [ "${DRY_RUN:-0}" = "1" ]; then
     printf '     [dry-run] would regenerate opencode.json via bin/opencode-config\n'

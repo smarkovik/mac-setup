@@ -1,0 +1,101 @@
+#!/bin/bash
+# Health check for the OpenCode setup this repo installs into ~/.config/opencode
+# (Desktop app; the CLI is not required). Verifies the generated config, the
+# symlinked skills/agents/MCP wrapper, gh auth for the GitHub MCP, and which
+# local model tiers are installed. Read-only: changes nothing.
+set -euo pipefail
+
+CFG="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
+FAILS=0 WARNS=0
+NC='\033[0m'; G='\033[1;32m'; O='\033[0;33m'; R='\033[1;31m'; B='\033[1;34m'
+ok()   { printf '%b\n' "${G}  ok${NC}  $*"; }
+warn() { printf '%b\n' "${O} warn${NC} $*"; WARNS=$((WARNS+1)); }
+bad()  { printf '%b\n' "${R} FAIL${NC} $*"; FAILS=$((FAILS+1)); }
+sec()  { printf '%b\n' "\n${B}==> $*${NC}"; }
+
+sec "OpenCode Desktop"
+if [ -d "/Applications/OpenCode.app" ]; then
+    ok "OpenCode.app ($(defaults read /Applications/OpenCode.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null || echo '?'))"
+else
+    warn "OpenCode.app not in /Applications"
+fi
+
+sec "Config: $CFG"
+[ -d "$CFG" ] || bad "missing $CFG"
+linked() {  # linked <name> - ok if it's a symlink into a mac-setup checkout
+    local p="$CFG/$1"
+    if [ -L "$p" ]; then
+        case "$(readlink "$p")" in
+            */mac-setup/config/opencode/*) ok "$1 -> repo" ;;
+            *) warn "$1 symlinked elsewhere: $(readlink "$p")" ;;
+        esac
+    elif [ -e "$p" ]; then
+        warn "$1 exists but is not a symlink (run ./mac-setup.sh --only opencode)"
+    else
+        bad "$1 missing (run ./mac-setup.sh --only opencode / opencode-platform)"
+    fi
+}
+linked opencode.json
+linked AGENTS.md
+linked prompts
+linked agents
+linked skills
+
+sec "opencode.json"
+JSON="$CFG/opencode.json"
+if [ -f "$JSON" ] && python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$JSON" 2>/dev/null; then
+    ok "valid JSON"
+    python3 - "$JSON" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+top = d.get("model")
+print(f"  ok   default model: {top}" if top else " warn no top-level default model")
+agents = list(d.get("agent", {}))
+print(f"  ok   json agents: {', '.join(agents)}" if agents else " warn no json agents")
+oll = list(d.get("provider", {}).get("ollama", {}).get("models", {}))
+print(f"  ok   ollama models in picker: {', '.join(oll) if oll else '(none installed)'}")
+gh = d.get("mcp", {}).get("github", {})
+print("  ok   mcp.github enabled" if gh.get("enabled") else " warn mcp.github disabled")
+PY
+else
+    bad "opencode.json missing or invalid JSON"
+fi
+
+sec "Markdown agents"
+for a in builder tester security; do
+    [ -f "$CFG/agents/$a.md" ] && ok "agents/$a.md" || bad "agents/$a.md missing"
+done
+
+sec "Skills"
+if [ -d "$CFG/skills" ]; then
+    n=0
+    for s in "$CFG"/skills/*/SKILL.md; do
+        [ -f "$s" ] || continue
+        n=$((n+1)); ok "$(basename "$(dirname "$s")")"
+    done
+    [ "$n" -gt 0 ] || warn "no skills installed"
+else
+    bad "skills dir missing"
+fi
+
+sec "GitHub MCP (gh wrapper)"
+[ -x "$CFG/bin/github-mcp-via-gh.sh" ] && ok "wrapper executable" || bad "bin/github-mcp-via-gh.sh missing or not executable"
+if command -v gh >/dev/null 2>&1; then
+    gh auth token >/dev/null 2>&1 && ok "gh auth token available" || warn "gh not logged in - GitHub MCP fails until: gh auth login"
+else
+    warn "gh not installed - GitHub MCP needs it"
+fi
+
+sec "Local models (ollama)"
+if command -v ollama >/dev/null 2>&1; then
+    pulled="$(ollama list 2>/dev/null | awk 'NR>1{print $1}' | grep '^qwen3-coder:' || true)"
+    [ -n "$pulled" ] && ok "installed: $(echo "$pulled" | paste -sd' ' -)" || warn "no qwen3-coder tiers pulled - run: local-code pull big"
+else
+    warn "ollama not installed"
+fi
+
+sec "Summary"
+if [ "$FAILS" -gt 0 ]; then
+    bad "$FAILS failure(s), $WARNS warning(s)"; exit 1
+fi
+ok "0 failures, $WARNS warning(s) - restart OpenCode Desktop to load changes"
