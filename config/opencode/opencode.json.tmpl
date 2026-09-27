@@ -81,11 +81,12 @@
   "mcp": {
     "github": {
       "type": "local",
-      "command": ["docker", "run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "-e", "GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security", "ghcr.io/github/github-mcp-server"],
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
-      },
-      "enabled": false
+      "command": [
+        "/bin/bash",
+        "-lc",
+        "exec \"$HOME/.config/opencode/bin/github-mcp-via-gh.sh\""
+      ],
+      "enabled": true
     }
   }
 }
