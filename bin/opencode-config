@@ -1,11 +1,13 @@
 #!/bin/bash
-# Generate config/opencode/opencode.json from opencode.json.tmpl, keeping only
-# the ollama models actually installed (per `ollama list`), so OpenCode's model
-# picker shows exactly what is downloaded - 3 pulled => 3 shown, none => none.
+# Generate config/opencode/opencode.json from opencode.json.tmpl, listing every
+# ollama model actually installed (per `ollama list`), so OpenCode's model
+# picker shows exactly what is downloaded - N pulled => N shown, none => none.
 # OpenCode does not auto-discover ollama models, so the list has to be baked in.
 #
-# The template is the committed source of truth (all tiers, with names/limits);
-# the generated opencode.json is gitignored and symlinked into ~/.config/opencode.
+# The template supplies friendly name/context-limit overrides for known tags;
+# any installed tag not in the template gets a generic entry instead, so a
+# fresh `ollama pull` + sync is enough - no repo edit needed.
+# The generated opencode.json is gitignored and symlinked into ~/.config/opencode.
 # Called by scripts/65-opencode.sh (setup) and bin/local-code (after pull/wipe).
 set -euo pipefail
 
@@ -41,7 +43,8 @@ with open(tmpl) as f:
 ollama = cfg.get("provider", {}).get("ollama")
 if ollama is not None:
     catalog = ollama.get("models", {})
-    ollama["models"] = {k: v for k, v in catalog.items() if k in installed}
+    default_entry = lambda tag: {"name": tag, "limit": {"context": 32768, "output": 8192}}
+    ollama["models"] = {tag: catalog.get(tag, default_entry(tag)) for tag in sorted(installed)}
     kept = len(ollama["models"])
 else:
     kept = 0

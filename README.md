@@ -181,8 +181,11 @@ local-code sync            # rebuild opencode.json to match what's downloaded
 ```
 
 **The picker shows only what you've downloaded.** OpenCode can't auto-detect
-ollama models, so `pull`, `wipe` and `sync` regenerate `opencode.json` from the
-template with only the installed tiers — three pulled, three shown; none, none.
+ollama models, so `pull`, `wipe` and `sync` regenerate `opencode.json` from
+`ollama list` — any installed tag is included, using the template's
+name/context-limit if it has an entry there, otherwise a generic one. Pulling
+a model outside the three tiers (e.g. another ollama.com model) needs no repo
+edit — just `ollama pull` it, then `local-code sync`.
 
 **Tiers download, they aren't `ollama pull`ed.** Hugging Face serves the GGUF
 blobs from a separate CDN host via a redirect `ollama pull` refuses ("blocked
